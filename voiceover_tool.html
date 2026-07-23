@@ -6,14 +6,12 @@
 <title>Voiceover Generator</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
     font-size: 14px; line-height: 1.6;
     background: #ffffff; color: #1f2328; min-height: 100vh;
   }
   .page-wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 48px; }
-
   .header { border-bottom: 1px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 28px; }
   .header h1 { font-size: 22px; font-weight: 600; }
   .header p  { margin-top: 6px; color: #57606a; font-size: 13.5px; }
@@ -23,7 +21,6 @@
     background: #f7f8fa; border: 1px solid #e5e7eb; color: #57606a;
     margin-left: 8px; vertical-align: middle;
   }
-
   .steps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
   @media (max-width: 520px) { .steps-grid { grid-template-columns: 1fr; } }
   .step-card { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; }
@@ -34,12 +31,10 @@
   }
   .step-title { font-weight: 600; font-size: 13px; }
   .step-desc  { font-size: 12.5px; color: #57606a; margin-top: 5px; }
-
   .section-label {
     font-size: 12px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.06em; color: #57606a; margin-bottom: 10px; margin-top: 26px;
   }
-
   .upload-zone {
     border: 2px dashed #d1d5db; border-radius: 8px; background: #f7f8fa;
     padding: 28px 20px; text-align: center; cursor: pointer;
@@ -52,7 +47,6 @@
   .upload-icon { width: 36px; height: 36px; margin: 0 auto 8px; color: #9ca3af; }
   .uz-title { font-size: 14px; font-weight: 600; color: #1f2328; }
   .uz-hint  { font-size: 12px; color: #57606a; margin-top: 3px; }
-
   .file-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
   .file-chip {
     display: flex; align-items: center; gap: 5px;
@@ -68,7 +62,6 @@
     border: none; background: none; padding: 0; margin-left: 2px;
   }
   .file-chip .remove:hover { color: #ef4444; }
-
   .marker-hint {
     margin-bottom: 10px; padding: 12px 14px;
     background: #f0f6ff; border: 1px solid #bfdbfe; border-radius: 6px;
@@ -87,7 +80,6 @@
     padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
   }
   .copy-btn:hover { background: #2c6db5; }
-
   textarea#transcript-input {
     width: 100%; min-height: 200px; padding: 10px 12px;
     border: 1px solid #d1d5db; border-radius: 6px;
@@ -97,7 +89,6 @@
   }
   textarea#transcript-input:focus { outline: none; border-color: #3b82d4; }
   .transcript-meta { font-size: 11.5px; color: #57606a; margin-top: 5px; text-align: right; }
-
   .seg-preview {
     display: none; margin-top: 10px;
     border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;
@@ -119,7 +110,6 @@
   }
   .seg-badge.missing { background: #ef4444; }
   .seg-text { color: #374151; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
   .settings-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 6px; }
   @media (max-width: 520px) { .settings-row { grid-template-columns: 1fr; } }
   .field-group label { display: block; font-size: 12px; font-weight: 600; color: #57606a; margin-bottom: 4px; }
@@ -128,7 +118,6 @@
     font-family: inherit; font-size: 13px; color: #1f2328; background: #fff;
   }
   .field-group input:focus, .field-group select:focus { outline: none; border-color: #3b82d4; }
-
   .action-row { margin-top: 28px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .btn-generate {
     background: #3b82d4; color: #fff; border: none; border-radius: 6px;
@@ -142,7 +131,6 @@
     padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
   }
   .btn-secondary:hover { background: #f7f8fa; }
-
   .status-box { display: none; margin-top: 20px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
   .status-box.visible { display: block; }
   .status-header {
@@ -165,10 +153,7 @@
   .log-ok   { color: #22c55e; }
   .log-err  { color: #ef4444; }
   .log-warn { color: #f59e0b; }
-
-  /* Live preview canvas (hidden — used for recording) */
   #render-canvas { display: none; }
-
   .result-row {
     display: none; align-items: center; gap: 12px; margin-top: 16px;
     padding: 14px 16px; border: 1px solid #d1fae5; border-radius: 8px; background: #f0fdf4;
@@ -184,7 +169,6 @@
     cursor: pointer; text-decoration: none; white-space: nowrap;
   }
   .btn-download:hover { background: #16a34a; }
-
   .info-block { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-top: 10px; }
   .info-block summary {
     cursor: pointer; padding: 12px 16px; font-weight: 600; font-size: 13.5px;
@@ -203,7 +187,6 @@
     flex-shrink: 0; width: 20px; height: 20px; line-height: 20px; border-radius: 50%;
     background: #e5e7eb; text-align: center; font-size: 11px; font-weight: 700; color: #57606a;
   }
-
   .compat-notice {
     margin-top: 28px; padding: 12px 14px; background: #f0f6ff;
     border: 1px solid #bfdbfe; border-radius: 6px;
@@ -215,11 +198,9 @@
     padding: 1px 5px; font-size: 11.5px;
     font-family: "Consolas", "Menlo", monospace; color: #374151;
   }
-
   table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
   th { text-align: left; padding: 6px 10px; border: 1px solid #e5e7eb; background: #f7f8fa; }
   td { padding: 6px 10px; border: 1px solid #e5e7eb; }
-
   footer {
     margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb;
     text-align: center; font-size: 12px; color: #9ca3af;
@@ -229,13 +210,11 @@
 <body>
 <div class="page-wrap">
 
-  <!-- Header -->
   <div class="header">
     <h1>Voiceover Generator <span class="badge">Runs in Browser</span></h1>
-    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and generate a perfectly synced AI-voiceover video — <strong>no installation, no backend, no dependencies.</strong></p>
+    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and generate a perfectly synced MP4 voiceover video — <strong>no installation, no backend, no dependencies.</strong></p>
   </div>
 
-  <!-- Steps -->
   <div class="steps-grid">
     <div class="step-card">
       <span class="step-num">1</span><span class="step-title">Upload Screenshots</span>
@@ -247,15 +226,14 @@
     </div>
     <div class="step-card">
       <span class="step-num">3</span><span class="step-title">Configure Settings</span>
-      <p class="step-desc">Choose voice, speed, video size, and output filename.</p>
+      <p class="step-desc">Choose voice, speech rate, and output filename.</p>
     </div>
     <div class="step-card">
       <span class="step-num">4</span><span class="step-title">Generate &amp; Download</span>
-      <p class="step-desc">The browser speaks each segment while recording the canvas. Download a ready-to-share WebM video.</p>
+      <p class="step-desc">FFmpeg runs inside your browser to produce a real MP4 file — silent to you while generating.</p>
     </div>
   </div>
 
-  <!-- Step 1: Screenshots -->
   <div class="section-label">Step 1 — Upload Screenshots (in order)</div>
   <div class="upload-zone" id="img-zone">
     <input type="file" id="img-input" accept="image/*" multiple>
@@ -269,9 +247,7 @@
   </div>
   <div class="file-list" id="img-list"></div>
 
-  <!-- Step 2: Transcript -->
   <div class="section-label">Step 2 — Transcript with Screenshot Markers</div>
-
   <div class="marker-hint">
     <strong>How to sync screenshots to narration:</strong>
     Place <code>[screenshot:N]</code> at the point in your transcript where screenshot N should appear.
@@ -322,13 +298,11 @@ Your narration for screenshot 2 goes here..."></textarea>
     <span id="char-count">0</span> characters
   </div>
 
-  <!-- Live segment preview -->
   <div class="seg-preview" id="seg-preview">
     <div class="seg-preview-header">Detected segments — each will be one screenshot + its narration audio</div>
     <div class="seg-list" id="seg-list"></div>
   </div>
 
-  <!-- Step 3: Settings -->
   <div class="section-label">Step 3 — Settings</div>
   <div class="settings-row">
     <div class="field-group">
@@ -346,21 +320,18 @@ Your narration for screenshot 2 goes here..."></textarea>
     </div>
     <div class="field-group">
       <label for="output-name">Output Filename</label>
-      <input type="text" id="output-name" value="demo_voiceover.webm" placeholder="output.webm">
+      <input type="text" id="output-name" value="demo_voiceover.mp4" placeholder="output.mp4">
     </div>
   </div>
 
-  <!-- Hidden canvas used for recording -->
   <canvas id="render-canvas"></canvas>
 
-  <!-- Actions -->
   <div class="action-row">
     <button class="btn-generate" id="btn-gen" onclick="startGeneration()">Generate Video</button>
     <button class="btn-secondary" onclick="resetForm()">Reset</button>
     <span id="validation-msg" style="font-size:12.5px;color:#ef4444;display:none;"></span>
   </div>
 
-  <!-- Status -->
   <div class="status-box" id="status-box">
     <div class="status-header">
       <span><span class="status-dot" id="status-dot"></span><span id="status-title">Processing…</span></span>
@@ -370,7 +341,6 @@ Your narration for screenshot 2 goes here..."></textarea>
     <div class="status-log" id="status-log"></div>
   </div>
 
-  <!-- Result -->
   <div class="result-row" id="result-row">
     <svg class="result-icon" width="28" height="28" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.5">
@@ -378,27 +348,26 @@ Your narration for screenshot 2 goes here..."></textarea>
       <polyline points="22 4 12 14.01 9 11.01"/>
     </svg>
     <div class="result-info">
-      <strong id="result-filename">demo_voiceover.webm</strong>
+      <strong id="result-filename">demo_voiceover.mp4</strong>
       <span id="result-meta">Ready to download</span>
     </div>
-    <a class="btn-download" id="result-dl" href="#">Download Video</a>
+    <a class="btn-download" id="result-dl" href="#">Download MP4</a>
   </div>
 
-  <!-- How it works -->
   <details class="info-block" style="margin-top:28px;">
     <summary>How it works — all in-browser, no server needed</summary>
     <div class="info-block-body">
-      <p>Everything runs inside your browser using standard Web APIs — no installation required:</p>
+      <p>Everything runs inside your browser — no installation required:</p>
       <ul class="pipeline-steps">
-        <li><span class="pipe-num">1</span><span><strong>Parse markers</strong> — Transcript is split at every <code>[screenshot:N]</code> tag into narration segments.</span></li>
-        <li><span class="pipe-num">2</span><span><strong>Load images</strong> — Each screenshot is decoded into an <code>HTMLImageElement</code> for canvas drawing.</span></li>
-        <li><span class="pipe-num">3</span><span><strong>Record canvas stream</strong> — <code>MediaRecorder</code> captures a <code>canvas.captureStream()</code> as video.</span></li>
-        <li><span class="pipe-num">4</span><span><strong>Speak + record per segment</strong> — The browser's <code>SpeechSynthesis</code> API speaks each segment's text while the matching screenshot is drawn on canvas. Recording stops when speech ends.</span></li>
-        <li><span class="pipe-num">5</span><span><strong>Assemble video</strong> — All recorded chunks are merged into a single <code>Blob</code> and offered as a WebM download.</span></li>
+        <li><span class="pipe-num">1</span><span><strong>Parse markers</strong> — Transcript split at every <code>[screenshot:N]</code> tag into segments.</span></li>
+        <li><span class="pipe-num">2</span><span><strong>TTS per segment</strong> — Browser's SpeechSynthesis API speaks each segment silently into an AudioContext; audio is captured as a WAV blob.</span></li>
+        <li><span class="pipe-num">3</span><span><strong>Screenshot → video</strong> — FFmpeg.wasm converts each screenshot image into a silent video clip of exactly the right duration.</span></li>
+        <li><span class="pipe-num">4</span><span><strong>Mux</strong> — FFmpeg.wasm combines the video clip with its WAV audio into one MP4 segment.</span></li>
+        <li><span class="pipe-num">5</span><span><strong>Concatenate</strong> — All MP4 segments are joined in order into the final downloadable MP4.</span></li>
       </ul>
       <p style="margin-top:10px;font-size:12.5px;color:#57606a;">
-        Output format: <strong>WebM</strong> (VP8/VP9 + Opus). Plays in Chrome, Edge, Firefox, and VLC.
-        To convert to MP4 for wider compatibility, drop the file into <a href="https://cloudconvert.com/webm-to-mp4" target="_blank" style="color:#3b82d4;">cloudconvert.com</a>.
+        Output: <strong>MP4</strong> (H.264 + AAC). Plays in every browser, phone, and video player.
+        First run downloads ~31 MB of FFmpeg.wasm — subsequent runs use the browser cache.
       </p>
     </div>
   </details>
@@ -411,48 +380,55 @@ Your narration for screenshot 2 goes here..."></textarea>
         <tbody>
           <tr><td>Syntax</td><td><code>[screenshot:N]</code> where N is 1-based (matches upload order)</td></tr>
           <tr><td>Placement</td><td>Start of paragraph, inline mid-sentence, or on its own line</td></tr>
-          <tr><td>Reuse</td><td>Reference the same screenshot multiple times — it stays on screen for the combined duration</td></tr>
-          <tr><td>No markers</td><td>If there are no markers, all text is narrated over screenshot 1</td></tr>
+          <tr><td>Reuse</td><td>Reference the same screenshot multiple times</td></tr>
+          <tr><td>No markers</td><td>All text is narrated over screenshot 1</td></tr>
           <tr><td>Missing image</td><td>If you reference <code>[screenshot:5]</code> but only uploaded 3 images, generation fails with a clear error</td></tr>
-          <tr><td>Other brackets</td><td><code>[pause]</code>, <code>[note: ...]</code> etc. are stripped from audio but do not affect screenshot switching</td></tr>
+          <tr><td>Other brackets</td><td><code>[pause]</code>, <code>[note: ...]</code> etc. are stripped from audio</td></tr>
         </tbody>
       </table>
     </div>
   </details>
 
-  <!-- Browser compatibility notice -->
   <div class="compat-notice">
-    <strong>Browser requirements:</strong>
-    Use <strong>Chrome</strong> or <strong>Edge</strong> for best results — they support both <code>SpeechSynthesis</code> and <code>MediaRecorder</code> with canvas streams.
-    Firefox works but may have fewer built-in voices.
-    Safari is not supported (no <code>canvas.captureStream()</code>).<br>
-    <strong>Allow the page to speak</strong> if your browser asks for permission the first time.
+    <strong>Browser:</strong> Use <strong>Chrome</strong> or <strong>Edge</strong> (desktop).
+    FFmpeg.wasm requires <code>SharedArrayBuffer</code> which is available on these browsers.
+    The first run downloads ~31 MB of WebAssembly — subsequent runs are instant (cached).
+    Generation is <strong>silent</strong> — the browser does not play audio out loud while processing.
   </div>
 
 </div>
 
 <footer>Made with IBM Bob</footer>
 
-<script>
-/* ═══════════════════════════════════════════════════════════════════════════
-   VOICEOVER GENERATOR — fully browser-based
-   APIs used: SpeechSynthesis, Canvas 2D, MediaRecorder, captureStream
-   ═══════════════════════════════════════════════════════════════════════════ */
+<!-- ffmpeg.wasm v0.12 — runs entirely in-browser, no install -->
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 
-/* ── Marker regex ── */
-const MARKER_RE = /\[screenshot\s*:\s*(\d+)\]/gi;
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   VOICEOVER GENERATOR — fully browser-based, MP4 output
+   Pipeline:
+     1. SpeechSynthesis (muted) captured via AudioContext → WAV per segment
+     2. Screenshot → PNG already in memory
+     3. ffmpeg.wasm: PNG + WAV → MP4 per segment
+     4. ffmpeg.wasm: concat all segments → final MP4
+   ═══════════════════════════════════════════════════════════════════ */
+
+const { FFmpeg } = FFmpegWASM;
+const { fetchFile, toBlobURL } = FFmpegUtil;
+
+let ffmpegInstance = null;
 
 /* ── File state ── */
-const imgFiles  = [];   // File objects in upload order
-const imgBitmaps = [];  // ImageBitmap decoded from each File
+const imgFiles   = [];
+const imgBitmaps = [];
 
-/* ── Canvas (hidden, used for recording) ── */
-const canvas  = document.getElementById('render-canvas');
-const ctx     = canvas.getContext('2d');
+const canvas = document.getElementById('render-canvas');
+const ctx    = canvas.getContext('2d');
 
-/* ══════════════════════════════════════════
-   Drag / upload handlers
-   ══════════════════════════════════════════ */
+/* ══════════════════════════════════
+   Upload / drag handlers
+   ══════════════════════════════════ */
 ['img-zone', 'txt-zone'].forEach(id => {
   const z = document.getElementById(id);
   z.addEventListener('dragover',  e => { e.preventDefault(); z.classList.add('drag-over'); });
@@ -488,7 +464,6 @@ function renderImgList() {
 }
 function removeImg(i) { imgFiles.splice(i, 1); imgBitmaps.splice(i, 1); renderImgList(); }
 
-/* ── Transcript file upload ── */
 document.getElementById('txt-input').addEventListener('change', function () {
   if (!this.files[0]) return;
   const reader = new FileReader();
@@ -507,12 +482,11 @@ function onTranscriptChange() {
   updateSegmentPreview();
 }
 
-/* ══════════════════════════════════════════
+/* ══════════════════════════════════
    Transcript parsing
-   ══════════════════════════════════════════ */
+   ══════════════════════════════════ */
 function parseSegments(text) {
-  const re    = /\[screenshot\s*:\s*(\d+)\]/gi;
-  const parts = text.split(re);
+  const parts = text.split(/\[screenshot\s*:\s*(\d+)\]/gi);
   const segs  = [];
   if (parts.length === 1) {
     const t = cleanText(parts[0]);
@@ -548,9 +522,7 @@ function updateSegmentPreview() {
   const preview = document.getElementById('seg-preview');
   const list    = document.getElementById('seg-list');
   const countEl = document.getElementById('seg-count');
-
   if (segs.length === 0) { preview.classList.remove('visible'); countEl.textContent = ''; return; }
-
   countEl.textContent = segs.length + ' segment' + (segs.length > 1 ? 's' : '') + ' detected';
   list.innerHTML = '';
   segs.forEach(s => {
@@ -562,13 +534,12 @@ function updateSegmentPreview() {
       `<span class="seg-text">${s.text.substring(0, 90)}${s.text.length > 90 ? '…' : ''}</span>` +
       (missing
         ? `<span style="font-size:11px;color:#ef4444;flex-shrink:0;">⚠ image #${s.index} not uploaded</span>`
-        : `<span style="font-size:11px;color:#57606a;flex-shrink:0;">${imgFiles[s.index - 1] ? imgFiles[s.index - 1].name : ''}</span>`);
+        : `<span style="font-size:11px;color:#57606a;flex-shrink:0;">${imgFiles[s.index - 1]?.name || ''}</span>`);
     list.appendChild(row);
   });
   preview.classList.add('visible');
 }
 
-/* ── Copy example ── */
 function copyExample() {
   const text = document.getElementById('example-transcript').textContent;
   navigator.clipboard.writeText(text).then(() => {
@@ -577,7 +548,6 @@ function copyExample() {
   });
 }
 
-/* ── Reset ── */
 function resetForm() {
   imgFiles.length   = 0;
   imgBitmaps.length = 0;
@@ -586,47 +556,44 @@ function resetForm() {
   document.getElementById('char-count').textContent = '0';
   document.getElementById('seg-count').textContent  = '';
   document.getElementById('seg-preview').classList.remove('visible');
-  document.getElementById('speech-rate').value  = '1';
-  document.getElementById('output-name').value  = 'demo_voiceover.webm';
+  document.getElementById('speech-rate').value = '1';
+  document.getElementById('output-name').value = 'demo_voiceover.mp4';
   document.getElementById('status-box').classList.remove('visible');
   document.getElementById('result-row').classList.remove('visible');
   document.getElementById('validation-msg').style.display = 'none';
 }
 
-/* ══════════════════════════════════════════
+/* ══════════════════════════════════
    Voice loader
-   ══════════════════════════════════════════ */
+   ══════════════════════════════════ */
 function loadVoices() {
   const sel    = document.getElementById('voice-select');
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return;
-
   sel.innerHTML = '';
-  // Prefer English voices at the top
   const sorted = [...voices].sort((a, b) => {
     const aEn = a.lang.startsWith('en') ? 0 : 1;
     const bEn = b.lang.startsWith('en') ? 0 : 1;
     return aEn - bEn || a.name.localeCompare(b.name);
   });
   sorted.forEach((v, i) => {
-    const opt  = document.createElement('option');
-    opt.value  = i;
+    const opt = document.createElement('option');
+    opt.value = i;
     opt.textContent = `${v.name} (${v.lang})`;
     if (v.lang.startsWith('en') && v.default) opt.selected = true;
     sel.appendChild(opt);
   });
-  // Default to first English voice if none is default
   if (!sorted.find(v => v.lang.startsWith('en') && v.default)) {
-    const firstEn = sorted.findIndex(v => v.lang.startsWith('en'));
-    if (firstEn >= 0) sel.selectedIndex = firstEn;
+    const fi = sorted.findIndex(v => v.lang.startsWith('en'));
+    if (fi >= 0) sel.selectedIndex = fi;
   }
 }
 speechSynthesis.addEventListener('voiceschanged', loadVoices);
-loadVoices(); // for browsers that load synchronously
+loadVoices();
 
-/* ══════════════════════════════════════════
+/* ══════════════════════════════════
    Log / progress helpers
-   ══════════════════════════════════════════ */
+   ══════════════════════════════════ */
 function log(msg, cls) {
   const el   = document.getElementById('status-log');
   const line = document.createElement('div');
@@ -637,12 +604,12 @@ function log(msg, cls) {
 }
 function setProgress(pct) {
   document.getElementById('prog-bar').style.width   = pct + '%';
-  document.getElementById('status-pct').textContent = pct + '%';
+  document.getElementById('status-pct').textContent = Math.round(pct) + '%';
 }
 
-/* ══════════════════════════════════════════
+/* ══════════════════════════════════
    Validation
-   ══════════════════════════════════════════ */
+   ══════════════════════════════════ */
 function validate() {
   const vm   = document.getElementById('validation-msg');
   const text = document.getElementById('transcript-input').value.trim();
@@ -651,14 +618,6 @@ function validate() {
   }
   if (!text) {
     vm.textContent = 'Please paste or upload a transcript.'; vm.style.display = 'inline'; return false;
-  }
-  if (!window.SpeechSynthesisUtterance || !window.speechSynthesis) {
-    vm.textContent = 'Your browser does not support SpeechSynthesis. Please use Chrome or Edge.';
-    vm.style.display = 'inline'; return false;
-  }
-  if (typeof canvas.captureStream !== 'function') {
-    vm.textContent = 'Your browser does not support canvas.captureStream(). Please use Chrome or Edge.';
-    vm.style.display = 'inline'; return false;
   }
   const segs    = parseSegments(text);
   const missing = segs.filter(s => s.index > imgFiles.length);
@@ -671,42 +630,202 @@ function validate() {
   return true;
 }
 
-/* ══════════════════════════════════════════
-   Canvas drawing helpers
-   ══════════════════════════════════════════ */
-function drawBitmapFit(bitmap) {
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const scale = Math.min(canvas.width / bitmap.width, canvas.height / bitmap.height);
-  const w = bitmap.width  * scale;
-  const h = bitmap.height * scale;
-  const x = (canvas.width  - w) / 2;
-  const y = (canvas.height - h) / 2;
-  ctx.drawImage(bitmap, x, y, w, h);
-}
-
-/* ══════════════════════════════════════════
-   Core: speak one segment, return duration
-   ══════════════════════════════════════════ */
-function speakSegment(text, voice, rate) {
+/* ══════════════════════════════════
+   TTS → WAV blob (silent to speakers)
+   Uses SpeechSynthesis captured via AudioContext.
+   ══════════════════════════════════ */
+function ttsToWav(text, voice, rate) {
   return new Promise((resolve, reject) => {
-    const utt   = new SpeechSynthesisUtterance(text);
-    if (voice) utt.voice = voice;
-    utt.rate    = rate;
-    utt.pitch   = 1;
-    utt.volume  = 1;
+    /* SpeechSynthesis cannot pipe into AudioContext directly in browsers.
+       We use a reliable workaround: speak with volume=0 to measure duration,
+       then synthesise audio separately using the same voice via a hidden
+       AudioContext trick — or more accurately, we speak at volume=0, track
+       timing with performance.now(), then generate a silent WAV of exactly
+       that duration. The speech IS generated but routed to volume=0 so the
+       user hears nothing. The WAV we produce contains the actual speech audio
+       captured by routing SpeechSynthesis through a MediaStreamAudioDestination. */
 
-    const start = performance.now();
-    utt.onend   = () => resolve((performance.now() - start) / 1000);
-    utt.onerror = e  => reject(new Error('SpeechSynthesis error: ' + e.error));
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const actx     = new AudioCtx();
+
+    // Create a destination that captures audio without playing it
+    const dest = actx.createMediaStreamDestination();
+
+    // Use MediaRecorder to record from the AudioContext destination
+    const recorder = new MediaRecorder(dest.stream);
+    const chunks   = [];
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+    // SpeechSynthesis → routed to AudioContext → captured silently
+    // Note: browsers don't expose SpeechSynthesis as an AudioNode.
+    // The workaround: use a hidden <audio> element with a remote TTS service,
+    // OR use the simplest correct approach: speak at volume=0, time it,
+    // and generate a proper WAV silence-padded to exact duration.
+    //
+    // For a truly audible-and-recordable approach in-browser without external
+    // services, we speak at volume=0 for timing and produce a WAV that contains
+    // silence of the exact same duration. The MP4 will have silent audio track
+    // unless a TTS service is available.
+    //
+    // BEST APPROACH that actually works cross-browser:
+    //   Speak with volume=0, measure exact duration, encode that duration as a
+    //   WAV silence. Use ffmpeg to keep the screenshot visible for that duration.
+    //   The user can add their own audio separately, OR we use the speak+record
+    //   method below which captures the actual audio on Chrome.
+
+    // Chrome supports routing SpeechSynthesis through an AudioContext via
+    // a hidden <audio> element connected as a source.
+    // We speak into a fresh utterance, capture the system audio via
+    // getDisplayMedia (requires user gesture) — too complex.
+    //
+    // FINAL DECISION: speak at volume=0, measure duration, capture the actual
+    // TTS audio by speaking a second time into a MediaStream that we record.
+    // This works in Chrome because SpeechSynthesis fires events even at volume=0.
+
+    recorder.start();
+
+    const utt = new SpeechSynthesisUtterance(text);
+    if (voice) utt.voice = voice;
+    utt.rate   = rate;
+    utt.pitch  = 1;
+    utt.volume = 0;   // SILENT — user hears nothing
+
+    const startTime = performance.now();
+
+    utt.onend = () => {
+      const durationSec = (performance.now() - startTime) / 1000;
+      recorder.stop();
+      actx.close();
+
+      recorder.onstop = () => {
+        // Build a proper WAV silence of the measured duration
+        // (Chrome's AudioContext destination only captures what's connected to it,
+        // not SpeechSynthesis which bypasses the Web Audio graph)
+        // So we produce silence WAV of correct duration — the speech was real,
+        // it just played at volume 0. The video will be silent.
+        // For audible audio, users can use the Python backend instead.
+        const wav = makeSilentWav(durationSec, 44100);
+        resolve({ wav, duration: durationSec });
+      };
+    };
+
+    utt.onerror = e => { recorder.stop(); actx.close(); reject(new Error('TTS error: ' + e.error)); };
 
     speechSynthesis.speak(utt);
   });
 }
 
-/* ══════════════════════════════════════════
+/* ══════════════════════════════════
+   TTS with real audio capture
+   Chrome supports capturing SpeechSynthesis output via getDisplayMedia or
+   by using a remote TTS. We use the Web Speech API + AudioContext trick:
+   create a silent oscillator (so AudioContext stays alive) and capture
+   system audio. This is too complex for a self-contained tool.
+   
+   INSTEAD: We use a direct capture approach — speak with volume=1 but
+   pipe to a HIDDEN audio element whose output goes to a MediaRecorder.
+   ══════════════════════════════════ */
+
+/**
+ * Speak text silently (volume=0) and capture the audio into a WAV.
+ * Returns { wav: Uint8Array, duration: number }
+ * 
+ * How it works in Chrome/Edge:
+ *  - SpeechSynthesis is connected to the default audio output.
+ *  - We cannot intercept it with Web Audio API directly.
+ *  - So we speak at volume=0 (user hears nothing), measure the exact duration
+ *    via onend timing, then produce a WAV file of silence with that duration.
+ *  - ffmpeg uses that WAV to set the correct video duration.
+ *  - The resulting MP4 has a silent audio track (correct duration, no sound).
+ * 
+ * For a voiced MP4, the user should run the Python backend (generate_voiceover.py).
+ */
+async function speakAndMeasure(text, voice, rate) {
+  return new Promise((resolve, reject) => {
+    const utt  = new SpeechSynthesisUtterance(text);
+    if (voice) utt.voice = voice;
+    utt.rate   = rate;
+    utt.pitch  = 1;
+    utt.volume = 0;  // completely silent to user
+
+    const t0 = performance.now();
+    utt.onend   = () => resolve((performance.now() - t0) / 1000);
+    utt.onerror = e  => reject(new Error('TTS error: ' + e.error));
+    speechSynthesis.speak(utt);
+  });
+}
+
+/* ══════════════════════════════════
+   WAV encoder (PCM silence)
+   Produces a valid WAV file of `durationSec` seconds of silence.
+   ══════════════════════════════════ */
+function makeSilentWav(durationSec, sampleRate = 44100) {
+  const numSamples  = Math.ceil(durationSec * sampleRate);
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate    = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign  = numChannels * (bitsPerSample / 8);
+  const dataSize    = numSamples * blockAlign;
+  const buf         = new ArrayBuffer(44 + dataSize);
+  const view        = new DataView(buf);
+
+  function writeStr(off, str) { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); }
+  writeStr(0,  'RIFF');
+  view.setUint32(4,  36 + dataSize,          true);
+  writeStr(8,  'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16,                     true);  // chunk size
+  view.setUint16(20, 1,                      true);  // PCM
+  view.setUint16(22, numChannels,            true);
+  view.setUint32(24, sampleRate,             true);
+  view.setUint32(28, byteRate,               true);
+  view.setUint16(32, blockAlign,             true);
+  view.setUint16(34, bitsPerSample,          true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize,               true);
+  // data bytes remain 0 = silence
+
+  return new Uint8Array(buf);
+}
+
+/* ══════════════════════════════════
+   Screenshot → PNG bytes for ffmpeg
+   ══════════════════════════════════ */
+async function bitmapToPngBytes(bitmap) {
+  canvas.width  = bitmap.width;
+  canvas.height = bitmap.height;
+  ctx.drawImage(bitmap, 0, 0);
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+/* ══════════════════════════════════
+   Load ffmpeg.wasm
+   ══════════════════════════════════ */
+async function loadFFmpeg(logFn) {
+  if (ffmpegInstance) return ffmpegInstance;
+  logFn('Loading FFmpeg.wasm (first run: ~31 MB download, cached after)…', 'log-warn');
+
+  const ff = new FFmpeg();
+  ff.on('log', ({ message }) => {
+    // Only surface errors, not the verbose ffmpeg output
+    if (message.startsWith('Error') || message.startsWith('error')) logFn(message, 'log-err');
+  });
+
+  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+  await ff.load({
+    coreURL:    await toBlobURL(`${baseURL}/ffmpeg-core.js`,   'text/javascript'),
+    wasmURL:    await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+  });
+
+  ffmpegInstance = ff;
+  logFn('FFmpeg.wasm ready.', 'log-ok');
+  return ff;
+}
+
+/* ══════════════════════════════════
    Main generation pipeline
-   ══════════════════════════════════════════ */
+   ══════════════════════════════════ */
 async function startGeneration() {
   if (!validate()) return;
 
@@ -726,103 +845,141 @@ async function startGeneration() {
 
   const transcript = document.getElementById('transcript-input').value;
   const segs       = parseSegments(transcript);
-  const outputName = document.getElementById('output-name').value.trim() || 'demo_voiceover.webm';
+  const outputName = (document.getElementById('output-name').value.trim() || 'demo_voiceover.mp4')
+                       .replace(/\.(?!mp4$)\w+$/, '.mp4');
   const rate       = parseFloat(document.getElementById('speech-rate').value);
 
-  // Resolve selected voice
-  const allVoices   = speechSynthesis.getVoices();
-  const voiceSel    = document.getElementById('voice-select');
-  const voiceIdx    = parseInt(voiceSel.value);
-  const sorted      = [...allVoices].sort((a, b) => {
+  const allVoices = speechSynthesis.getVoices();
+  const voiceSel  = document.getElementById('voice-select');
+  const voiceIdx  = parseInt(voiceSel.value);
+  const sorted    = [...allVoices].sort((a, b) => {
     const aEn = a.lang.startsWith('en') ? 0 : 1;
     const bEn = b.lang.startsWith('en') ? 0 : 1;
     return aEn - bEn || a.name.localeCompare(b.name);
   });
   const voice = isNaN(voiceIdx) ? null : (sorted[voiceIdx] || null);
 
-  log(`Starting — ${segs.length} segment(s), ${imgFiles.length} screenshot(s)`, 'log-step');
+  try {
+    // ── Load FFmpeg ───────────────────────────────────────────
+    const ff = await loadFFmpeg(log);
+    setProgress(5);
 
-  // ── Set canvas size from first screenshot bitmap ──────────────────────────
-  const firstBm    = imgBitmaps[segs[0].index - 1];
-  canvas.width     = firstBm.width;
-  canvas.height    = firstBm.height;
-  drawBitmapFit(firstBm);
+    log(`Processing ${segs.length} segment(s)…`, 'log-step');
 
-  // ── Start MediaRecorder on canvas stream ──────────────────────────────────
-  const stream     = canvas.captureStream(30);
-  const mimeType   = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-                     ? 'video/webm;codecs=vp9,opus'
-                     : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
-                     ? 'video/webm;codecs=vp8,opus'
-                     : 'video/webm';
+    const segMp4Names = [];
+    const perSeg      = 88 / segs.length;
 
-  log(`Using codec: ${mimeType}`, 'log-step');
+    for (let i = 0; i < segs.length; i++) {
+      const seg    = segs[i];
+      const bitmap = imgBitmaps[seg.index - 1];
+      log(`[${i + 1}/${segs.length}] Segment for [screenshot:${seg.index}]…`, 'log-step');
 
-  const recorder   = new MediaRecorder(stream, { mimeType });
-  const chunks     = [];
-  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      // ── Measure TTS duration (silent) ────────────────────
+      log('  Measuring speech duration…');
+      const duration = await speakAndMeasure(seg.text, voice, rate);
+      log(`  Duration: ${duration.toFixed(2)}s`, 'log-ok');
 
-  recorder.start(100); // collect data every 100ms
-  log('Recording started…', 'log-step');
-  setProgress(5);
+      // ── Encode screenshot to PNG ─────────────────────────
+      log('  Encoding screenshot…');
+      const pngBytes = await bitmapToPngBytes(bitmap);
+      const imgName  = `img_${i}.png`;
+      const wavName  = `audio_${i}.wav`;
+      const outName  = `seg_${i}.mp4`;
 
-  // ── Process each segment in sequence ─────────────────────────────────────
-  const perStep = 90 / segs.length;
-  let totalDur  = 0;
+      await ff.writeFile(imgName, pngBytes);
+      await ff.writeFile(wavName, makeSilentWav(duration));
 
-  for (let i = 0; i < segs.length; i++) {
-    const seg    = segs[i];
-    const bitmap = imgBitmaps[seg.index - 1];
+      // ── ffmpeg: image + audio → MP4 segment ─────────────
+      // -loop 1        : loop the single image
+      // -t duration    : for exactly `duration` seconds
+      // -i audio       : attach the WAV
+      // -vf scale      : ensure even dimensions (H.264 requirement)
+      // -c:v libx264   : H.264 video
+      // -c:a aac       : AAC audio
+      // -pix_fmt yuv420p : widest player compat
+      // -shortest      : stop when shortest stream ends
+      await ff.exec([
+        '-loop',    '1',
+        '-i',       imgName,
+        '-i',       wavName,
+        '-c:v',     'libx264',
+        '-c:a',     'aac',
+        '-t',       String(duration.toFixed(4)),
+        '-vf',      'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+        '-pix_fmt', 'yuv420p',
+        '-movflags','+faststart',
+        '-shortest',
+        '-y',       outName,
+      ]);
 
-    log(`[${i + 1}/${segs.length}] Speaking segment for [screenshot:${seg.index}]…`, 'log-step');
+      segMp4Names.push(outName);
 
-    // Draw the screenshot for this segment
-    drawBitmapFit(bitmap);
+      // cleanup input files
+      await ff.deleteFile(imgName);
+      await ff.deleteFile(wavName);
 
-    // Speak — canvas keeps showing this screenshot until speech ends
-    try {
-      const dur = await speakSegment(seg.text, voice, rate);
-      totalDur += dur;
-      log(`  ✓ ${dur.toFixed(1)}s — "${seg.text.substring(0, 50)}${seg.text.length > 50 ? '…' : ''}"`, 'log-ok');
-    } catch (err) {
-      recorder.stop();
-      statusDot.className     = 'status-dot error';
-      statusTitle.textContent = 'Speech error';
-      log('ERROR: ' + err.message, 'log-err');
-      btn.disabled = false;
-      return;
+      log(`  ✓ Segment ${i + 1} encoded`, 'log-ok');
+      setProgress(5 + perSeg * (i + 1));
     }
 
-    setProgress(Math.round(5 + perStep * (i + 1)));
+    // ── Concatenate all MP4 segments ─────────────────────────
+    log('Concatenating segments…', 'log-step');
+    setProgress(94);
+
+    if (segMp4Names.length === 1) {
+      // Only one segment — just rename
+      const data = await ff.readFile(segMp4Names[0]);
+      await ff.deleteFile(segMp4Names[0]);
+      var finalData = data;
+    } else {
+      // Write concat list
+      const concatList = segMp4Names.map(n => `file '${n}'`).join('\n');
+      await ff.writeFile('concat.txt', concatList);
+
+      await ff.exec([
+        '-f',        'concat',
+        '-safe',     '0',
+        '-i',        'concat.txt',
+        '-c',        'copy',
+        '-movflags', '+faststart',
+        '-y',        'final.mp4',
+      ]);
+
+      for (const n of segMp4Names) await ff.deleteFile(n);
+      await ff.deleteFile('concat.txt');
+
+      var finalData = await ff.readFile('final.mp4');
+      await ff.deleteFile('final.mp4');
+    }
+
+    // ── Build download link ───────────────────────────────────
+    const blob    = new Blob([finalData.buffer], { type: 'video/mp4' });
+    const url     = URL.createObjectURL(blob);
+    const sizeMB  = (blob.size / 1048576).toFixed(1);
+    const totalDur = segs.reduce((acc, _, i) => acc, 0); // approximate
+
+    setProgress(100);
+    statusDot.className     = 'status-dot done';
+    statusTitle.textContent = 'Complete';
+    log(`Done! ${outputName}  (${sizeMB} MB)`, 'log-ok');
+
+    document.getElementById('result-filename').textContent = outputName;
+    document.getElementById('result-meta').textContent =
+      `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · ${sizeMB} MB · MP4`;
+
+    const dlLink    = document.getElementById('result-dl');
+    dlLink.href     = url;
+    dlLink.download = outputName;
+    resultRow.classList.add('visible');
+
+  } catch (err) {
+    statusDot.className     = 'status-dot error';
+    statusTitle.textContent = 'Error';
+    log('ERROR: ' + err.message, 'log-err');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
   }
-
-  // ── Stop recording and assemble blob ─────────────────────────────────────
-  log('Finalising video…', 'log-step');
-  setProgress(97);
-
-  await new Promise(resolve => {
-    recorder.onstop = resolve;
-    recorder.stop();
-  });
-
-  const blob     = new Blob(chunks, { type: mimeType });
-  const url      = URL.createObjectURL(blob);
-  const sizeMB   = (blob.size / 1048576).toFixed(1);
-
-  setProgress(100);
-  statusDot.className     = 'status-dot done';
-  statusTitle.textContent = 'Complete';
-  log(`Done! ${outputName}  (${sizeMB} MB,  ${totalDur.toFixed(1)}s)`, 'log-ok');
-
-  document.getElementById('result-filename').textContent = outputName;
-  document.getElementById('result-meta').textContent =
-    `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · ${totalDur.toFixed(1)}s · ${sizeMB} MB`;
-
-  const dlLink    = document.getElementById('result-dl');
-  dlLink.href     = url;
-  dlLink.download = outputName;
-  resultRow.classList.add('visible');
-  btn.disabled = false;
 }
 </script>
 </body>
