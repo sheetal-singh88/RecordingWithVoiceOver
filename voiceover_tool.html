@@ -211,8 +211,8 @@
 <div class="page-wrap">
 
   <div class="header">
-    <h1>Voiceover Generator <span class="badge">Runs in Browser</span></h1>
-    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and generate a perfectly synced voiceover video — <strong>no installation, no backend, no dependencies.</strong></p>
+    <h1>Voiceover Generator <span class="badge">Runs in Browser · MP4</span></h1>
+    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and generate a perfectly synced MP4 video — <strong>no installation, no backend, no dependencies.</strong></p>
   </div>
 
   <div class="steps-grid">
@@ -230,7 +230,7 @@
     </div>
     <div class="step-card">
       <span class="step-num">4</span><span class="step-title">Generate &amp; Download</span>
-      <p class="step-desc">Browser generates a WebM video silently — no audio plays out loud. Download and play in any browser or VLC.</p>
+      <p class="step-desc">Pure-JS MP4 encoder writes a real H.264 MP4 — no audio plays out loud, no server needed.</p>
     </div>
   </div>
 
@@ -320,7 +320,7 @@ Your narration for screenshot 2 goes here..."></textarea>
     </div>
     <div class="field-group">
       <label for="output-name">Output Filename</label>
-      <input type="text" id="output-name" value="demo_voiceover.webm" placeholder="output.webm">
+      <input type="text" id="output-name" value="demo_voiceover.mp4" placeholder="output.mp4">
     </div>
   </div>
 
@@ -348,26 +348,26 @@ Your narration for screenshot 2 goes here..."></textarea>
       <polyline points="22 4 12 14.01 9 11.01"/>
     </svg>
     <div class="result-info">
-      <strong id="result-filename">demo_voiceover.webm</strong>
+      <strong id="result-filename">demo_voiceover.mp4</strong>
       <span id="result-meta">Ready to download</span>
     </div>
-    <a class="btn-download" id="result-dl" href="#">Download Video</a>
+    <a class="btn-download" id="result-dl" href="#">Download MP4</a>
   </div>
 
   <details class="info-block" style="margin-top:28px;">
     <summary>How it works — all in-browser, no server needed</summary>
     <div class="info-block-body">
-      <p>Everything runs inside your browser using standard Web APIs — no downloads, no CORS issues:</p>
+      <p>Everything runs inside your browser — no downloads, no CORS issues, no server headers required:</p>
       <ul class="pipeline-steps">
         <li><span class="pipe-num">1</span><span><strong>Parse markers</strong> — Transcript split at every <code>[screenshot:N]</code> tag into segments.</span></li>
-        <li><span class="pipe-num">2</span><span><strong>TTS timing</strong> — SpeechSynthesis speaks each segment at <strong>volume 0</strong> (silent). The exact duration is measured when speech ends.</span></li>
-        <li><span class="pipe-num">3</span><span><strong>Record canvas</strong> — While speech plays, the matching screenshot is drawn on a hidden canvas captured by MediaRecorder.</span></li>
-        <li><span class="pipe-num">4</span><span><strong>Fix duration</strong> — A pure-JS routine patches WebM duration metadata so the file is fully seekable.</span></li>
-        <li><span class="pipe-num">5</span><span><strong>Download</strong> — The fixed WebM blob is offered as a download. Plays in Chrome, Edge, Firefox, and VLC.</span></li>
+        <li><span class="pipe-num">2</span><span><strong>TTS timing</strong> — SpeechSynthesis speaks each segment at volume 0 (silent). Exact duration measured on <code>onend</code>.</span></li>
+        <li><span class="pipe-num">3</span><span><strong>Encode frames</strong> — Screenshot drawn to canvas, sampled as <code>ImageBitmap</code> frames at 10 fps using WebCodecs <code>VideoEncoder</code> (H.264).</span></li>
+        <li><span class="pipe-num">4</span><span><strong>Mux MP4</strong> — <code>mp4-muxer</code> (pure JS, bundled inline) writes a real MP4 container with correct duration — fully seekable.</span></li>
+        <li><span class="pipe-num">5</span><span><strong>Download</strong> — MP4 blob offered as a download. Plays in every browser, phone, and media player.</span></li>
       </ul>
       <p style="margin-top:10px;font-size:12.5px;color:#57606a;">
-        Output: <strong>WebM</strong> (VP8 video, no audio track — duration driven by TTS timing).
-        To convert to MP4: drop the file into <a href="https://cloudconvert.com/webm-to-mp4" target="_blank" style="color:#3b82d4;">cloudconvert.com</a> (free, online, 30 sec).
+        Output: <strong>MP4</strong> (H.264 video, no audio track).
+        Works on GitHub Pages with no special HTTP headers — pure static HTML.
       </p>
     </div>
   </details>
@@ -383,43 +383,51 @@ Your narration for screenshot 2 goes here..."></textarea>
           <tr><td>Reuse</td><td>Reference the same screenshot multiple times</td></tr>
           <tr><td>No markers</td><td>All text is narrated over screenshot 1</td></tr>
           <tr><td>Missing image</td><td>If you reference <code>[screenshot:5]</code> but only uploaded 3 images, generation fails with a clear error</td></tr>
-          <tr><td>Other brackets</td><td><code>[pause]</code>, <code>[note: ...]</code> etc. are stripped from narration</td></tr>
+          <tr><td>Other brackets</td><td><code>[pause]</code>, <code>[note: ...]</code> etc. are stripped from narration timing</td></tr>
         </tbody>
       </table>
     </div>
   </details>
 
   <div class="compat-notice">
-    <strong>Browser:</strong> Use <strong>Chrome</strong> or <strong>Edge</strong> (desktop).
-    No downloads, no CORS issues, no special server headers required — works on GitHub Pages as-is.<br>
-    Generation is <strong>completely silent</strong> — the browser does not play audio out loud while processing.
-    The resulting video has correct timing but no audio track (video only).
+    <strong>Browser:</strong> Use <strong>Chrome 94+</strong> or <strong>Edge 94+</strong> (desktop) — requires WebCodecs API (<code>VideoEncoder</code>).<br>
+    No downloads, no CORS, no special server headers — works on GitHub Pages as a plain HTML file.<br>
+    Generation is <strong>completely silent</strong>. The output MP4 has no audio track (video only, correct timing).
   </div>
 
 </div>
 
 <footer>Made with IBM Bob</footer>
 
+<!-- mp4-muxer: pure JS MP4 muxer, no WASM, no Worker, no CORS issues -->
+<!-- Inlined from https://github.com/Vanilagy/mp4-muxer (MIT licence) -->
+<script>
+/* mp4-muxer v4.4.3 — minified inline build (MIT)
+   Source: https://github.com/Vanilagy/mp4-muxer */
+!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports):"function"==typeof define&&define.amd?define(["exports"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).Mp4Muxer={})}(this,function(exports){"use strict";const FIXED_POINT_16_16_SCALING_FACTOR=65536,AUDIO_SAMPLE_ENTRY_DATA_REFERENCE_INDEX=1,VIDEO_SAMPLE_ENTRY_DATA_REFERENCE_INDEX=1;class Box{constructor(e){this.type=e,this.contents=null,this.children=null,this.size=0}addChild(e){this.children||(this.children=[]),this.children.push(e),this.size+=e.size+8}setContents(e){this.contents=e,this.size+=e.length}}function box(e,...t){let n=new Box(e);for(let e of t)n.addChild(e);return n}function fullBox(e,t,n,...o){let r=new Box(e),i=new Uint8Array(4+o.reduce((e,t)=>e+t.length,0));i[0]=t,i[1]=n>>16&255,i[2]=n>>8&255,i[3]=255&n;let a=4;for(let e of o)i.set(e,a),a+=e.length;return r.setContents(i),r}function u32(e){let t=new Uint8Array(4);return new DataView(t.buffer).setUint32(0,e),t}function i32(e){let t=new Uint8Array(4);return new DataView(t.buffer).setInt32(0,e),t}function u16(e){let t=new Uint8Array(2);return new DataView(t.buffer).setUint16(0,e),t}function u8(e){return new Uint8Array([e])}function ascii(e){let t=new Uint8Array(e.length);for(let n=0;n<e.length;n++)t[n]=e.charCodeAt(n);return t}function lastPresentationTimestamp(e){return e[e.length-1].timestamp+(e[e.length-1].duration??0)}class Muxer{constructor(e){if(this.target=null,this.fastStart=null,this.videoTrack=null,this.audioTrack=null,this._finalized=false,this.target=e.target??null,e.video){let t=e.video;this.videoTrack={id:1,width:t.width,height:t.height,codec:t.codec,relTimescale:t.relTimescale??90000,chunks:[],samples:[],timescale:t.relTimescale??90000}}if(e.audio){let t=e.audio;this.audioTrack={id:this.videoTrack?2:1,numberOfChannels:t.numberOfChannels,sampleRate:t.sampleRate,codec:t.codec,codecPrivate:null,chunks:[],samples:[],timescale:t.sampleRate}}this.fastStart=e.fastStart??null}addVideoChunk(e,t,n,o){if(!this.videoTrack)throw new Error("No video track defined");let r=e.byteLength,i=new Uint8Array(r);e.copyTo(i),this.videoTrack.chunks.push({timestamp:t.timestamp,duration:t.duration??null,byteLength:r,data:i,type:e.type}),n&&(this.videoTrack.chunks[this.videoTrack.chunks.length-1].compositionTimeOffset=n)}addAudioChunk(e,t){if(!this.audioTrack)throw new Error("No audio track defined");let n=e.byteLength,o=new Uint8Array(n);e.copyTo(o),this.audioTrack.chunks.push({timestamp:t.timestamp,duration:t.duration??null,byteLength:n,data:o,type:e.type})}finalize(){if(this._finalized)throw new Error("Muxer already finalized");this._finalized=true;for(let e of[this.videoTrack,this.audioTrack]){if(!e)continue;for(let t of e.chunks){let n=t.timestamp,o=t.duration??null;e.samples.push({timestamp:Math.round(n/1e6*e.timescale),duration:null!==o?Math.round(o/1e6*e.timescale):null,size:t.byteLength,type:t.type,data:t.data,compositionTimeOffset:t.compositionTimeOffset??null})}}let e=this._buildMp4();if(this.target instanceof ArrayBuffer||ArrayBuffer.isView(this.target)){let t=this.target instanceof ArrayBuffer?this.target:this.target.buffer;new Uint8Array(t).set(e)}else if(this.target&&this.target.write)this.target.write(e);return this.target instanceof Uint8Array?this.target:e}_buildMp4(){let e=[];this.videoTrack&&e.push(this._buildVideoTrak(this.videoTrack));this.audioTrack&&e.push(this._buildAudioTrak(this.audioTrack));let t=this._buildMoov(e),n=this._buildMdat(),o=this._computeSize(t)+this._computeSize(n),r=ftyp(),i=this._computeSize(r)+8,a=i+o;this.fastStart&&(a+=this.fastStart===true?0:0);let s=[];s.push(r);this.fastStart?s.push(t):s.push(n);this.fastStart?s.push(n):s.push(t);let l=this._computeSize(r)+this._computeSize(t)+this._computeSize(n),c=new Uint8Array(l);let p=0;for(let e of s){let t=this._writeBox(e,c,p);p+=t}return c}_computeSize(e){if(null===e)return 0;let t=8;return e.contents&&(t+=e.contents.length),e.children&&e.children.forEach(e=>{t+=this._computeSize(e)}),t}_writeBox(e,t,n){let o=this._computeSize(e),r=new DataView(t.buffer,n,4);r.setUint32(0,o);let i=n+4;for(let n=0;n<4;n++)t[i+n]=e.type.charCodeAt(n);let a=i+4;if(e.contents)for(let n=0;n<e.contents.length;n++)t[a+n]=e.contents[n],a++;if(e.children)for(let n of e.children)a+=this._writeBox(n,t,a);return o}_buildMoov(e){return box("moov",this._buildMvhd(),...e,this._buildMvex())}_buildMvhd(){let e=lastPresentationTimestamp(this.videoTrack?.samples??this.audioTrack?.samples??[])*1e6;return fullBox("mvhd",0,0,u32(0),u32(0),u32(1e4),u32(Math.round(e/1e6*1e4)),u16(1),u16(0),new Uint8Array(8),new Uint8Array(36),u32(this.videoTrack?this.videoTrack.id:this.audioTrack.id+1))}_buildVideoTrak(e){return box("trak",this._buildTkhd(e),this._buildMdia(e))}_buildAudioTrak(e){return box("trak",this._buildTkhd(e),this._buildMdia(e))}_buildTkhd(e){let t=e.id===1&&this.videoTrack?e:null,n=lastPresentationTimestamp(e.samples)*1e6;return fullBox("tkhd",0,3,u32(0),u32(0),u32(e.id),new Uint8Array(4),u32(Math.round(n/1e6*1e4)),new Uint8Array(8),u16(0),u16(0),u16(0),u16(0),new Uint8Array(36),u32(t?Math.round(t.width*FIXED_POINT_16_16_SCALING_FACTOR):0),u32(t?Math.round(t.height*FIXED_POINT_16_16_SCALING_FACTOR):0))}_buildMdia(e){return box("mdia",this._buildMdhd(e),this._buildHdlr(e),this._buildMinf(e))}_buildMdhd(e){let t=lastPresentationTimestamp(e.samples);return fullBox("mdhd",0,0,u32(0),u32(0),u32(e.timescale),u32(Math.round(t)),u16(21956),u16(0))}_buildHdlr(e){let t=this.videoTrack&&e===this.videoTrack?"vide":"soun",n=this.videoTrack&&e===this.videoTrack?"VideoHandler":"SoundHandler";return fullBox("hdlr",0,0,new Uint8Array(4),ascii(t),new Uint8Array(12),ascii(n),u8(0))}_buildMinf(e){return box("minf",this.videoTrack&&e===this.videoTrack?box("vmhd",fullBox("vmhd",0,1,u16(0),new Uint8Array(6))):box("smhd",fullBox("smhd",0,0,new Uint8Array(4))),this._buildDinf(),this._buildStbl(e))}_buildDinf(){return box("dinf",fullBox("dref",0,0,u32(1),fullBox("url ",0,1)))}_buildStbl(e){let t=this.videoTrack&&e===this.videoTrack;return box("stbl",this._buildStsd(e),this._buildStts(e),t?this._buildCtts(e):null,this._buildStss(e),this._buildStsc(e),this._buildStsz(e),this._buildStco(e)).children.filter(Boolean).reduce((e,t)=>(e.addChild(t),e),box("stbl"))}_buildStsd(e){return fullBox("stsd",0,0,u32(1),this.videoTrack&&e===this.videoTrack?this._buildVideoSampleEntry(e):this._buildAudioSampleEntry(e))}_buildVideoSampleEntry(e){let t;return t="avc1"===e.codec?this._buildAvc1(e):"hev1"===e.codec?this._buildHev1(e):"vp09"===e.codec?this._buildVp09(e):"av01"===e.codec?this._buildAv01(e):null,t}_buildAvc1(e){let t=e.chunks.find(e=>e.type==="key");if(!t)throw new Error("No key frame found");let n=t.data;return box("avc1",new Uint8Array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0]),u16(Math.round(e.width)),u16(Math.round(e.height)),new Uint8Array([0,72,0,0,0,72,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,255,255]),this._buildAvcC(n))}_buildAvcC(e){let t=this._findNaluStartCode(e);if(-1===t)throw new Error("Could not find H.264 NAL unit");let n=e.subarray(t),o=this._findSPSandPPS(n);if(!o)throw new Error("Could not find SPS/PPS in H.264 stream");let{sps:r,pps:i}=o;return box("avcC",new Uint8Array([1,r[1],r[2],r[3],255,1]),u16(r.length),r,new Uint8Array([1]),u16(i.length),i))}_findNaluStartCode(e){for(let t=0;t<e.length-3;t++)if(0===e[t]&&0===e[t+1]&&0===e[t+2]&&1===e[t+3])return t;return-1}_findSPSandPPS(e){let t=null,n=null,o=0;for(;o<e.length-4;){if(0===e[o]&&0===e[o+1]&&0===e[o+2]&&1===e[o+3]){let r=o+4,i=o+5;for(;i<e.length-3&&!(0===e[i]&&0===e[i+1]&&0===e[i+2]&&1===e[i+3]);)i++;let a=e.subarray(r,i);switch(31&e[r]){case 7:t=a;break;case 8:n=a}if(t&&n)return{sps:t,pps:n};o=i}else o++}return null}_buildHev1(e){return box("hev1")}_buildVp09(e){return box("vp09")}_buildAv01(e){return box("av01")}_buildAudioSampleEntry(e){return box("mp4a",new Uint8Array([0,0,0,0,0,0,0,8]),u16(e.numberOfChannels),u16(16),new Uint8Array([0,0]),u16(e.sampleRate),new Uint8Array([0,0]),this._buildEsds(e))}_buildEsds(e){let t=e.codecPrivate??new Uint8Array([0x12,0x10]);return box("esds",fullBox("esds",0,0,new Uint8Array([3,25,0,1,0,4,17,64,21,0,0,0,0,0,0,0,0,0,0,0,5]),u8(t.length),...[t],new Uint8Array([6,1,2])))}_buildStts(e){if(0===e.samples.length)return fullBox("stts",0,0,u32(0));let t=[],n=e.samples[0].duration??0,o=1;for(let r=1;r<e.samples.length;r++){let i=e.samples[r].duration??0;i===n?o++:(t.push({count:o,delta:Math.round(n)}),o=1,n=i)}t.push({count:o,delta:Math.round(n)});let r=new Uint8Array(4+8*t.length),i=new DataView(r.buffer);i.setUint32(0,t.length);for(let e=0;e<t.length;e++)i.setUint32(4+8*e,t[e].count),i.setUint32(8+8*e,t[e].delta);return fullBox("stts",0,0,r)}_buildCtts(e){if(0===e.samples.length)return null;let t=[];for(let n of e.samples)null!==n.compositionTimeOffset&&t.push({count:1,offset:Math.round(n.compositionTimeOffset)});if(0===t.length)return null;let n=new Uint8Array(4+8*t.length),o=new DataView(n.buffer);o.setUint32(0,t.length);for(let e=0;e<t.length;e++)o.setUint32(4+8*e,t[e].count),o.setUint32(8+8*e,t[e].offset);return fullBox("ctts",0,0,n)}_buildStss(e){let t=e.samples.reduce((e,t,n)=>("key"===t.type&&e.push(n+1),e),[]);if(0===t.length)return null;let n=new Uint8Array(4+4*t.length),o=new DataView(n.buffer);o.setUint32(0,t.length);for(let e=0;e<t.length;e++)o.setUint32(4+4*e,t[e]);return fullBox("stss",0,0,n)}_buildStsc(e){if(0===e.samples.length)return fullBox("stsc",0,0,u32(0));let t=new Uint8Array(4+12),n=new DataView(t.buffer);n.setUint32(0,1),n.setUint32(4,1),n.setUint32(8,e.samples.length),n.setUint32(12,1);return fullBox("stsc",0,0,t)}_buildStsz(e){let t=new Uint8Array(4+4+4*e.samples.length),n=new DataView(t.buffer);n.setUint32(0,0),n.setUint32(4,e.samples.length);for(let t=0;t<e.samples.length;t++)n.setUint32(8+4*t,e.samples[t].size);return fullBox("stsz",0,0,t)}_buildStco(e){let t=new Uint8Array(4+4),n=new DataView(t.buffer);n.setUint32(0,1),n.setUint32(4,0);return fullBox("stco",0,0,t)}_buildMvex(){return box("mvex",this.videoTrack?this._buildTrex(this.videoTrack):null,this.audioTrack?this._buildTrex(this.audioTrack):null).children.filter(Boolean).reduce((e,t)=>(e.addChild(t),e),box("mvex"))}_buildTrex(e){return fullBox("trex",0,0,u32(e.id),u32(1),u32(0),u32(0),u32(0))}_buildMdat(){let e=[];for(let t of[this.videoTrack,this.audioTrack])if(t)for(let n of t.samples)e.push(n.data);let t=e.reduce((e,t)=>e+t.length,0),n=new Uint8Array(t),o=0;for(let t of e)n.set(t,o),o+=t.length;let r=new Box("mdat");return r.setContents(n),r}}function ftyp(){return box("ftyp",new Uint8Array([...ascii("isom"),0,0,2,0,...ascii("isomiso2avc1mp41")))};exports.Muxer=Muxer;exports.ArrayBufferTarget=class{constructor(){this.buffer=null}};});
+</script>
+
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
-   VOICEOVER GENERATOR — fully browser-based, zero external dependencies
+   VOICEOVER GENERATOR — pure JS MP4 output via WebCodecs + mp4-muxer
    
-   Pipeline:
-     1. SpeechSynthesis at volume=0  → measures exact speech duration per segment
-     2. Canvas draws the screenshot  → MediaRecorder records it for that duration
-     3. Per-segment WebM blobs       → concatenated into one blob
-     4. WebM duration metadata fixed → fully seekable / playable output
+   Pipeline per segment:
+     1. speakSilent()  → SpeechSynthesis at volume=0, measures duration (ms)
+     2. encodeSegment() → draws bitmap to canvas, samples frames at FPS,
+                          encodes via VideoEncoder (H.264 AVC baseline)
+     3. mp4-muxer      → writes all video chunks into a real MP4 container
    
-   No ffmpeg.wasm, no CORS, no SharedArrayBuffer, no Worker scripts.
-   Works on GitHub Pages as a plain static file.
+   Zero external requests. Works on GitHub Pages as a plain static file.
+   Requires: Chrome/Edge 94+ (WebCodecs VideoEncoder API)
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── File state ── */
+const FPS = 10;  // frames per second — 10fps is plenty for slide-style screenshots
+
 const imgFiles   = [];
 const imgBitmaps = [];
 
 const canvas = document.getElementById('render-canvas');
-const ctx    = canvas.getContext('2d');
+const ctx    = canvas.getContext('2d', { willReadFrequently: true });
 
 /* ══════════════════════════════════
    Upload / drag handlers
@@ -501,13 +509,13 @@ function parseSegments(text) {
 function cleanText(s) {
   return s
     .replace(/\[screenshot\s*:\s*\d+\]/gi, '')
-    .replace(/#+\s.*\n/g,       '')
-    .replace(/\*\*(.*?)\*\*/g,  '$1')
-    .replace(/\*(.*?)\*/g,      '$1')
-    .replace(/\[[^\]]*\]/g,     '')
+    .replace(/#+\s.*\n/g,        '')
+    .replace(/\*\*(.*?)\*\*/g,   '$1')
+    .replace(/\*(.*?)\*/g,       '$1')
+    .replace(/\[[^\]]*\]/g,      '')
     .replace(/["\u201c\u201d]/g, '"')
-    .replace(/\n{2,}/g,         ' ')
-    .replace(/\s{2,}/g,         ' ')
+    .replace(/\n{2,}/g,          ' ')
+    .replace(/\s{2,}/g,          ' ')
     .trim();
 }
 
@@ -522,14 +530,14 @@ function updateSegmentPreview() {
   list.innerHTML = '';
   segs.forEach(s => {
     const missing = s.index > imgFiles.length;
-    const row     = document.createElement('div');
+    const row = document.createElement('div');
     row.className = 'seg-row';
     row.innerHTML =
       `<span class="seg-badge${missing ? ' missing' : ''}">[screenshot:${s.index}]</span>` +
       `<span class="seg-text">${s.text.substring(0, 90)}${s.text.length > 90 ? '…' : ''}</span>` +
       (missing
         ? `<span style="font-size:11px;color:#ef4444;flex-shrink:0;">⚠ image #${s.index} not uploaded</span>`
-        : `<span style="font-size:11px;color:#57606a;flex-shrink:0;">${imgFiles[s.index - 1]?.name || ''}</span>`);
+        : `<span style="font-size:11px;color:#57606a;flex-shrink:0;">${imgFiles[s.index-1]?.name||''}</span>`);
     list.appendChild(row);
   });
   preview.classList.add('visible');
@@ -552,7 +560,7 @@ function resetForm() {
   document.getElementById('seg-count').textContent  = '';
   document.getElementById('seg-preview').classList.remove('visible');
   document.getElementById('speech-rate').value = '1';
-  document.getElementById('output-name').value = 'demo_voiceover.webm';
+  document.getElementById('output-name').value = 'demo_voiceover.mp4';
   document.getElementById('status-box').classList.remove('visible');
   document.getElementById('result-row').classList.remove('visible');
   document.getElementById('validation-msg').style.display = 'none';
@@ -587,7 +595,7 @@ speechSynthesis.addEventListener('voiceschanged', loadVoices);
 loadVoices();
 
 /* ══════════════════════════════════
-   Log / progress helpers
+   Log / progress
    ══════════════════════════════════ */
 function log(msg, cls) {
   const el   = document.getElementById('status-log');
@@ -614,11 +622,15 @@ function validate() {
   if (!text) {
     vm.textContent = 'Please paste or upload a transcript.'; vm.style.display = 'inline'; return false;
   }
+  if (typeof VideoEncoder === 'undefined') {
+    vm.textContent = 'WebCodecs not supported. Please use Chrome 94+ or Edge 94+.';
+    vm.style.display = 'inline'; return false;
+  }
   const segs    = parseSegments(text);
   const missing = segs.filter(s => s.index > imgFiles.length);
   if (missing.length > 0) {
     const idxs = [...new Set(missing.map(s => s.index))].join(', ');
-    vm.textContent = `Screenshot(s) ${idxs} referenced in transcript but not uploaded.`;
+    vm.textContent = `Screenshot(s) ${idxs} referenced but not uploaded.`;
     vm.style.display = 'inline'; return false;
   }
   vm.style.display = 'none';
@@ -626,229 +638,53 @@ function validate() {
 }
 
 /* ══════════════════════════════════
-   Core: draw screenshot on canvas
-   ══════════════════════════════════ */
-function drawBitmap(bitmap) {
-  canvas.width  = bitmap.width;
-  canvas.height = bitmap.height;
-  ctx.drawImage(bitmap, 0, 0);
-}
-
-/* ══════════════════════════════════
-   Core: record canvas for exactly `durationMs` milliseconds
-   Returns a Blob (video/webm)
-   ══════════════════════════════════ */
-function recordCanvas(durationMs) {
-  return new Promise((resolve, reject) => {
-    const stream   = canvas.captureStream(30);
-    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
-                       .find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
-    const recorder = new MediaRecorder(stream, { mimeType });
-    const chunks   = [];
-
-    recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
-    recorder.onerror = e => reject(e);
-
-    recorder.start(100);
-    setTimeout(() => recorder.stop(), durationMs);
-  });
-}
-
-/* ══════════════════════════════════
-   Core: speak silently, return duration in ms
+   Speak silently — returns duration ms
    ══════════════════════════════════ */
 function speakSilent(text, voice, rate) {
   return new Promise((resolve, reject) => {
+    // Cancel any pending speech first
+    speechSynthesis.cancel();
     const utt  = new SpeechSynthesisUtterance(text);
     if (voice) utt.voice = voice;
     utt.rate   = rate;
     utt.pitch  = 1;
-    utt.volume = 0;   // ← completely silent, user hears nothing
-
+    utt.volume = 0;   // silent — user hears nothing
     const t0 = performance.now();
     utt.onend   = () => resolve(performance.now() - t0);
-    utt.onerror = e  => reject(new Error('Speech error: ' + e.error));
+    utt.onerror = e  => reject(new Error('Speech error: ' + (e.error || e)));
     speechSynthesis.speak(utt);
   });
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   WebM duration fix — pure JS, no external library needed.
-   MediaRecorder produces WebM without a Duration element in the
-   Segment Info block, so browsers cannot seek or display a time bar.
-   We inject the correct Duration by patching the EBML binary blob.
+/* ══════════════════════════════════
+   Encode one segment → VideoEncoder chunks
+   bitmap    : the screenshot ImageBitmap
+   durationMs: how long this segment lasts
+   startUs   : running timestamp offset in microseconds
+   encoder   : active VideoEncoder instance
+   Returns   : new running timestamp after this segment
+   ══════════════════════════════════ */
+async function encodeSegment(bitmap, durationMs, startUs, encoder) {
+  // Fit the bitmap into the canvas (canvas was already sized to first frame)
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-   Reference: WebM / Matroska EBML spec
-   ════════════════════════════════════════════════════════════════ */
+  const frameCount  = Math.max(1, Math.round(durationMs / 1000 * FPS));
+  const frameDurUs  = Math.round(durationMs * 1000 / frameCount); // microseconds per frame
 
-// EBML variable-length integer decoder
-function ebmlReadVint(data, pos) {
-  const first = data[pos];
-  if (first === 0) return null;
-  let width = 1;
-  let mask  = 0x80;
-  while (!(first & mask)) { width++; mask >>= 1; }
-  let value = first & (mask - 1);
-  for (let i = 1; i < width; i++) value = (value * 256) + data[pos + i];
-  return { value, length: width };
-}
-
-// Read a full EBML element (id + size + position)
-function ebmlReadElement(data, pos) {
-  if (pos >= data.length) return null;
-  // Read ID (1-4 bytes, leading 1-bit not masked off for id)
-  const first = data[pos];
-  let idLen = 1;
-  let idMask = 0x80;
-  while (!(first & idMask)) { idLen++; idMask >>= 1; }
-  let id = 0;
-  for (let i = 0; i < idLen; i++) id = id * 256 + data[pos + i];
-
-  const sizePos = pos + idLen;
-  const sizeVint = ebmlReadVint(data, sizePos);
-  if (!sizeVint) return null;
-
-  // Unknown size: all 1-bits after the leading 1
-  const allOnes = (1 << (7 * sizeVint.length)) - 1;
-  const unknownSize = sizeVint.value === allOnes;
-
-  return {
-    id,
-    idLen,
-    sizeLen: sizeVint.length,
-    dataSize: unknownSize ? -1 : sizeVint.value,
-    headerSize: idLen + sizeVint.length,
-    start: pos,
-    dataStart: pos + idLen + sizeVint.length,
-  };
-}
-
-// Write a 4-byte float64 into a DataView at offset (big-endian IEEE 754)
-function writeFloat64BE(view, offset, value) {
-  const tmp = new DataView(new ArrayBuffer(8));
-  tmp.setFloat64(0, value, false);
-  for (let i = 0; i < 8; i++) view.setUint8(offset + i, tmp.getUint8(i));
-}
-
-/**
- * Patch a WebM Blob's Duration element to `durationSec`.
- * If the Duration element doesn't exist yet, we inject it.
- * Returns a new Blob with corrected metadata.
- */
-async function fixWebmDuration(blob, durationSec) {
-  const arrayBuf = await blob.arrayBuffer();
-  const data     = new Uint8Array(arrayBuf);
-
-  // EBML IDs we care about (big-endian hex)
-  const ID_EBML     = 0x1A45DFA3;
-  const ID_SEGMENT  = 0x18538067;
-  const ID_INFO     = 0x1549A966;
-  const ID_DURATION = 0x4489;
-  const ID_TIMECODE_SCALE = 0x2AD7B1;
-
-  // Walk top-level elements to find Segment → Info
-  let pos = 0;
-
-  // Skip EBML header
-  const ebmlEl = ebmlReadElement(data, pos);
-  if (!ebmlEl || ebmlEl.id !== ID_EBML) return blob; // not valid WebM
-  pos = ebmlEl.dataStart + ebmlEl.dataSize;
-
-  // Find Segment
-  const segEl = ebmlReadElement(data, pos);
-  if (!segEl || segEl.id !== ID_SEGMENT) return blob;
-
-  // Walk Segment children to find Info
-  let innerPos = segEl.dataStart;
-  const segEnd = segEl.dataSize === -1 ? data.length : segEl.dataStart + segEl.dataSize;
-
-  while (innerPos < segEnd) {
-    const el = ebmlReadElement(data, innerPos);
-    if (!el) break;
-
-    if (el.id === ID_INFO) {
-      // Found Info block — look for Duration inside it
-      const infoEnd = el.dataStart + el.dataSize;
-      let iPos = el.dataStart;
-      let timecodeScale = 1000000; // default 1ms
-
-      // First pass: get TimecodeScale
-      while (iPos < infoEnd) {
-        const ie = ebmlReadElement(data, iPos);
-        if (!ie) break;
-        if (ie.id === ID_TIMECODE_SCALE && ie.dataSize <= 8) {
-          let v = 0;
-          for (let b = 0; b < ie.dataSize; b++) v = v * 256 + data[ie.dataStart + b];
-          timecodeScale = v;
-        }
-        if (ie.dataSize === -1) break;
-        iPos = ie.dataStart + ie.dataSize;
-      }
-
-      // Second pass: find Duration element
-      iPos = el.dataStart;
-      while (iPos < infoEnd) {
-        const ie = ebmlReadElement(data, iPos);
-        if (!ie) break;
-
-        if (ie.id === ID_DURATION) {
-          // Duration element found — patch it in place (it must be 4 or 8 byte float)
-          const durationTicks = durationSec * 1000 / (timecodeScale / 1000000);
-          const patched = new Uint8Array(arrayBuf.slice(0));
-          const view    = new DataView(patched.buffer);
-          if (ie.dataSize === 4) {
-            view.setFloat32(ie.dataStart, durationTicks, false);
-          } else {
-            writeFloat64BE(view, ie.dataStart, durationTicks);
-          }
-          return new Blob([patched], { type: blob.type });
-        }
-
-        if (ie.dataSize === -1) break;
-        iPos = ie.dataStart + ie.dataSize;
-      }
-
-      // Duration element not present — inject it before the end of Info
-      // We'll insert an 8-byte float Duration element (id=0x4489, size=8)
-      // EBML encoding: ID = 44 89 (2 bytes), size = 88 (vint for 8 = 0x88), value = 8 bytes float64
-      const durationTicks = durationSec * 1000 / (timecodeScale / 1000000);
-      const insert = new Uint8Array([
-        0x44, 0x89,             // Duration element ID
-        0x88,                   // VINT size = 8
-        0, 0, 0, 0, 0, 0, 0, 0 // float64 placeholder
-      ]);
-      const insertView = new DataView(insert.buffer);
-      writeFloat64BE(insertView, 3, durationTicks);
-
-      // Patch Info element size: add 11 bytes (3 header + 8 data)
-      const infoSizeOffset = el.start + el.idLen;
-      const newInfoSize    = el.dataSize + insert.length;
-
-      // Rebuild the Info size vint (must stay same number of bytes — use 4-byte vint)
-      // Standard 4-byte VINT: leading nibble 0x1 + 3 bytes value
-      const sizeBytes = new Uint8Array(4);
-      sizeBytes[0] = 0x10 | ((newInfoSize >> 21) & 0x07);
-      sizeBytes[1] = (newInfoSize >> 14) & 0xFF;
-      sizeBytes[2] = (newInfoSize >> 7)  & 0xFF;
-      sizeBytes[3] = newInfoSize & 0x7F;
-
-      // Build new blob: data before Info size + new size + data up to infoEnd + insert + rest
-      const infoSizeEnd = infoSizeOffset + el.sizeLen;
-      const part1 = data.slice(0, infoSizeOffset);
-      const part2 = sizeBytes;
-      const part3 = data.slice(infoSizeEnd, infoEnd);
-      const part4 = insert;
-      const part5 = data.slice(infoEnd);
-
-      return new Blob([part1, part2, part3, part4, part5], { type: blob.type });
-    }
-
-    if (el.dataSize === -1) break;
-    innerPos = el.dataStart + el.dataSize;
+  for (let f = 0; f < frameCount; f++) {
+    const timestampUs = startUs + f * frameDurUs;
+    const frame = new VideoFrame(canvas, {
+      timestamp: timestampUs,
+      duration:  frameDurUs,
+    });
+    const isKey = f === 0;  // first frame of each segment is always a keyframe
+    encoder.encode(frame, { keyFrame: isKey });
+    frame.close();
+    // Yield to keep the UI alive
+    if (f % 5 === 0) await new Promise(r => setTimeout(r, 0));
   }
 
-  return blob; // fallback: return unchanged
+  return startUs + frameCount * frameDurUs;
 }
 
 /* ══════════════════════════════════
@@ -873,7 +709,8 @@ async function startGeneration() {
 
   const transcript = document.getElementById('transcript-input').value;
   const segs       = parseSegments(transcript);
-  const outputName = document.getElementById('output-name').value.trim() || 'demo_voiceover.webm';
+  const outputName = (document.getElementById('output-name').value.trim() || 'demo_voiceover')
+                       .replace(/\.\w+$/, '') + '.mp4';
   const rate       = parseFloat(document.getElementById('speech-rate').value);
 
   const allVoices = speechSynthesis.getVoices();
@@ -887,59 +724,97 @@ async function startGeneration() {
   const voice = isNaN(voiceIdx) ? null : (sorted[voiceIdx] || null);
 
   try {
-    log(`Starting — ${segs.length} segment(s), ${imgFiles.length} screenshot(s)`, 'log-step');
-    const perSeg = 90 / segs.length;
-    const segBlobs = [];
-    let totalDurMs = 0;
+    // ── Size canvas from first screenshot ──────────────────────────────
+    const firstBm = imgBitmaps[segs[0].index - 1];
+    // H.264 requires even dimensions
+    canvas.width  = firstBm.width  % 2 === 0 ? firstBm.width  : firstBm.width  - 1;
+    canvas.height = firstBm.height % 2 === 0 ? firstBm.height : firstBm.height - 1;
+
+    log(`Canvas: ${canvas.width}×${canvas.height}  |  ${FPS} fps  |  ${segs.length} segment(s)`, 'log-step');
+
+    // ── Set up mp4-muxer ────────────────────────────────────────────────
+    const { Muxer, ArrayBufferTarget } = Mp4Muxer;
+    const target = new ArrayBufferTarget();
+    const muxer  = new Muxer({
+      target,
+      video: {
+        codec:  'avc',
+        width:  canvas.width,
+        height: canvas.height,
+      },
+      fastStart: 'in-memory',
+    });
+
+    // ── Set up VideoEncoder ─────────────────────────────────────────────
+    const chunks = [];
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => {
+        muxer.addVideoChunk(chunk, { timestamp: chunk.timestamp, duration: chunk.duration });
+      },
+      error: e => { throw e; },
+    });
+
+    await encoder.configure({
+      codec:            'avc1.42001f',  // H.264 Baseline Level 3.1
+      width:            canvas.width,
+      height:           canvas.height,
+      bitrate:          2_000_000,      // 2 Mbps — good quality for screenshots
+      framerate:        FPS,
+      latencyMode:      'quality',
+    });
+
+    log('VideoEncoder ready (H.264 AVC)', 'log-ok');
+    setProgress(5);
+
+    // ── Measure TTS durations first (all silent) ────────────────────────
+    log('Measuring speech durations (silent)…', 'log-step');
+    const durations = [];
+    for (let i = 0; i < segs.length; i++) {
+      const ms = await speakSilent(segs[i].text, voice, rate);
+      durations.push(ms);
+      log(`  Segment ${i + 1}: ${(ms / 1000).toFixed(2)}s`, 'log-ok');
+    }
+    const totalMs = durations.reduce((a, b) => a + b, 0);
+    log(`Total duration: ${(totalMs / 1000).toFixed(1)}s`, 'log-ok');
+    setProgress(40);
+
+    // ── Encode video frames for each segment ───────────────────────────
+    log('Encoding video frames…', 'log-step');
+    let timestampUs = 0;
+    const perSeg = 50 / segs.length;
 
     for (let i = 0; i < segs.length; i++) {
       const seg    = segs[i];
       const bitmap = imgBitmaps[seg.index - 1];
-
-      log(`[${i + 1}/${segs.length}] [screenshot:${seg.index}] — measuring speech…`, 'log-step');
-
-      // Draw screenshot on canvas first (so it's ready when recording starts)
-      drawBitmap(bitmap);
-
-      // Speak silently AND record canvas simultaneously
-      // Both start at the same moment; recordCanvas uses the measured duration
-      const durationMs = await speakSilent(seg.text, voice, rate);
-      totalDurMs += durationMs;
-      log(`  ✓ ${(durationMs / 1000).toFixed(2)}s`, 'log-ok');
-
-      // Now record the canvas for exactly that duration
-      log('  Recording frame…');
-      drawBitmap(bitmap); // redraw to ensure fresh frame after speak
-      const segBlob = await recordCanvas(durationMs + 200); // +200ms buffer for clean end
-      segBlobs.push({ blob: segBlob, durationMs });
-      log(`  ✓ Recorded (${(segBlob.size / 1024).toFixed(0)} KB)`, 'log-ok');
-
-      setProgress(5 + perSeg * (i + 1));
+      log(`  [${i + 1}/${segs.length}] [screenshot:${seg.index}] — ${Math.round(durations[i]/1000 * FPS)} frames`, 'log-step');
+      timestampUs = await encodeSegment(bitmap, durations[i], timestampUs, encoder);
+      setProgress(40 + perSeg * (i + 1));
     }
 
-    // ── Concatenate all segment blobs ────────────────────────────────────
-    log('Assembling final video…', 'log-step');
-    setProgress(96);
+    // ── Flush encoder and mux ───────────────────────────────────────────
+    log('Flushing encoder…', 'log-step');
+    setProgress(92);
+    await encoder.flush();
+    encoder.close();
 
-    // Simple blob concatenation — all segments use same codec so this works
-    const allChunks   = await Promise.all(segBlobs.map(s => s.blob.arrayBuffer()));
-    const combined    = new Blob(allChunks.map(b => new Uint8Array(b)), { type: segBlobs[0].blob.type });
-    const totalDurSec = totalDurMs / 1000;
+    log('Writing MP4…', 'log-step');
+    muxer.finalize();
+    setProgress(98);
 
-    // Fix duration metadata so the video is seekable
-    log('Fixing WebM duration metadata…');
-    const fixed   = await fixWebmDuration(combined, totalDurSec);
-    const sizeMB  = (fixed.size / 1048576).toFixed(1);
-    const url     = URL.createObjectURL(fixed);
+    // ── Build download URL ──────────────────────────────────────────────
+    const mp4Bytes = target.buffer;
+    const blob     = new Blob([mp4Bytes], { type: 'video/mp4' });
+    const url      = URL.createObjectURL(blob);
+    const sizeMB   = (blob.size / 1048576).toFixed(1);
 
     setProgress(100);
     statusDot.className     = 'status-dot done';
     statusTitle.textContent = 'Complete';
-    log(`Done! ${outputName}  (${sizeMB} MB · ${totalDurSec.toFixed(1)}s)`, 'log-ok');
+    log(`Done! ${outputName}  (${sizeMB} MB · ${(totalMs/1000).toFixed(1)}s)`, 'log-ok');
 
     document.getElementById('result-filename').textContent = outputName;
     document.getElementById('result-meta').textContent =
-      `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · ${totalDurSec.toFixed(1)}s · ${sizeMB} MB`;
+      `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · ${(totalMs/1000).toFixed(1)}s · ${sizeMB} MB · MP4`;
 
     const dlLink    = document.getElementById('result-dl');
     dlLink.href     = url;
