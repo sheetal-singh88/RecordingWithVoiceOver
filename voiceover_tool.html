@@ -908,24 +908,28 @@ function speakSilent(text, voice, rate) {
    Returns   : new running timestamp after this segment
    ══════════════════════════════════ */
 async function encodeSegment(bitmap, durationMs, startUs, encoder) {
-  // Fit the bitmap into the canvas (canvas was already sized to first frame)
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-  const frameCount  = Math.max(1, Math.round(durationMs / 1000 * FPS));
-  const frameDurUs  = Math.round(durationMs * 1000 / frameCount); // microseconds per frame
+  const frameCount = Math.max(1, Math.round(durationMs / 1000 * FPS));
+  const frameDurUs = Math.round(durationMs * 1000 / frameCount);
 
   for (let f = 0; f < frameCount; f++) {
-    const timestampUs = startUs + f * frameDurUs;
+    // Back-pressure: wait if the encoder queue is getting full
+    // This replaces setTimeout yields (which caused "closed codec" errors)
+    while (encoder.encodeQueueSize > 5) {
+      await new Promise(r => requestAnimationFrame(r));
+    }
+
     const frame = new VideoFrame(canvas, {
-      timestamp: timestampUs,
+      timestamp: startUs + f * frameDurUs,
       duration:  frameDurUs,
     });
-    const isKey = f === 0;  // first frame of each segment is always a keyframe
-    encoder.encode(frame, { keyFrame: isKey });
+    encoder.encode(frame, { keyFrame: f === 0 });
     frame.close();
-    // Yield to keep the UI alive
-    if (f % 5 === 0) await new Promise(r => setTimeout(r, 0));
   }
+
+  // Flush after every segment so all frames are processed before moving on
+  await encoder.flush();
 
   return startUs + frameCount * frameDurUs;
 }
@@ -992,12 +996,12 @@ async function startGeneration() {
     });
 
     await encoder.configure({
-      codec:            'avc1.42001f',  // H.264 Baseline Level 3.1
-      width:            canvas.width,
-      height:           canvas.height,
-      bitrate:          2_000_000,      // 2 Mbps — good quality for screenshots
-      framerate:        FPS,
-      latencyMode:      'quality',
+      codec:        'avc1.42001f',  // H.264 Baseline Level 3.1
+      width:        canvas.width,
+      height:       canvas.height,
+      bitrate:      4_000_000,      // 4 Mbps — high quality for screenshots
+      framerate:    FPS,
+      latencyMode:  'realtime',     // process frames immediately, no buffering
     });
 
     log('VideoEncoder ready (H.264 AVC)', 'log-ok');
