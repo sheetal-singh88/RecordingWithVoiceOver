@@ -1,59 +1,47 @@
 # 🎬 Voiceover Generator
 
-Generate perfectly synced AI-voiceover demo videos from **screenshots + a plain-text transcript** — no timeline editing, no recording software, no manual timing.
+Generate perfectly synced AI-voiceover demo videos from **screenshots + a plain-text transcript** — no installation, no backend, no dependencies.
 
-Each screenshot stays on screen for **exactly as long as its narration takes to speak**, driven by `[screenshot:N]` markers you place in the transcript.
+**[▶ Open the tool](https://YOUR_USERNAME.github.io/voiceover-tool/voiceover_tool.html)**
 
 ---
 
 ## How it works
 
-```
-Screenshots (PNG/JPG)  +  Annotated Transcript (.md / .txt)
-                ↓
-        Python backend (Flask + gTTS + moviepy)
-                ↓
-           Final MP4 video
-```
+Everything runs **inside your browser** using standard Web APIs:
+
+| API | Purpose |
+|-----|---------|
+| `SpeechSynthesis` | Speaks each narration segment using a built-in browser voice |
+| `Canvas 2D` | Draws the matching screenshot while speech is playing |
+| `canvas.captureStream()` | Turns the canvas into a live video stream |
+| `MediaRecorder` | Records that stream to a WebM video blob |
 
 The pipeline for each `[screenshot:N]` segment:
 
-1. **Parse markers** — transcript is split at every `[screenshot:N]` tag into narration segments  
-2. **TTS per segment** — gTTS generates a separate MP3; exact duration is measured with mutagen  
-3. **Video per segment** — moviepy loops the referenced screenshot for exactly that audio duration  
-4. **Concatenate** — all video clips are joined; all audio clips are joined  
-5. **Mux** — silent video + combined audio → final MP4 (H.264 + AAC, web-compatible)
+1. **Parse markers** — transcript is split at every `[screenshot:N]` tag  
+2. **Draw screenshot** — the matching image is rendered to a hidden canvas  
+3. **Speak** — browser speaks the narration; canvas recording runs simultaneously  
+4. **Wait for speech end** — recording of that segment stops exactly when speech ends  
+5. **Repeat** for the next segment  
+6. **Download** — all chunks merged into a single WebM file
 
 ---
 
-## Quick start
+## Usage — two ways
 
-### Option A — One-click (Windows)
+### Option A — GitHub Pages (recommended, zero setup)
 
-Double-click **`START_VOICEOVER_TOOL.bat`**.  
-It will install all dependencies, start the server, and open the browser UI automatically.
+1. Fork this repository
+2. Go to **Settings → Pages → Source: Deploy from branch → `main` → `/` (root)**
+3. Visit `https://YOUR_USERNAME.github.io/voiceover-tool/voiceover_tool.html`
+4. Share that URL with anyone — it works in Chrome or Edge with no installation
 
-### Option B — Manual
+### Option B — Local file
 
-**1. Install dependencies**
-
-```bash
-pip install flask flask-cors gtts mutagen moviepy
-```
-
-> `moviepy` bundles its own FFmpeg binary via `imageio_ffmpeg` — no system FFmpeg installation required.
-
-**2. Start the backend server**
-
-```bash
-python generate_voiceover.py --serve
-# optional: --port 8080
-```
-
-**3. Open the frontend**
-
-Open `voiceover_tool.html` in any modern browser (Chrome, Edge, Firefox).  
-The status indicator at the bottom of the page will turn **green** when the backend is connected.
+1. Clone or download this repository
+2. Open `voiceover_tool.html` directly in Chrome or Edge
+3. No server needed — it works as a local `file://` URL
 
 ---
 
@@ -91,52 +79,36 @@ See [`example_transcript.md`](example_transcript.md) for a complete working exam
 
 ---
 
+## Output format
+
+The tool generates **WebM** (VP8/VP9 + Opus audio).
+
+- Plays natively in Chrome, Edge, Firefox, and VLC  
+- To convert to MP4: drag the file into [cloudconvert.com/webm-to-mp4](https://cloudconvert.com/webm-to-mp4) (free, online)
+
+---
+
+## Browser compatibility
+
+| Browser | Supported |
+|---------|-----------|
+| Chrome 74+ | ✅ Full support |
+| Edge 79+ | ✅ Full support |
+| Firefox | ✅ Works (fewer voices) |
+| Safari | ❌ No `canvas.captureStream()` |
+
+---
+
 ## Project structure
 
 ```
 voiceover-tool/
-├── voiceover_tool.html          # Browser UI (drag-and-drop, live preview)
-├── generate_voiceover.py        # Python backend — Flask API + pipeline
-├── audio_utils.py               # Shared TTS / audio helper
-├── requirements.txt             # Python dependencies
-├── START_VOICEOVER_TOOL.bat     # Windows one-click launcher
-└── example_transcript.md        # Sample annotated transcript
+├── voiceover_tool.html       # The entire tool — open this in Chrome/Edge
+├── example_transcript.md     # Sample annotated transcript
+└── README.md
 ```
 
----
-
-## Requirements
-
-| Component | Version |
-|-----------|---------|
-| Python | 3.8 + |
-| flask | ≥ 3.0 |
-| flask-cors | ≥ 4.0 |
-| gtts | ≥ 2.5 |
-| mutagen | ≥ 1.47 |
-| moviepy | ≥ 1.0.3 |
-
-No system FFmpeg installation is needed — `moviepy` auto-downloads its own FFmpeg binary on first run.
-
----
-
-## Supported TTS languages
-
-English (default), English AU, English UK, English US, French, German, Spanish, Japanese  
-(Any [gTTS-supported language code](https://gtts.readthedocs.io/en/latest/module.html#languages-gtts-lang) can be typed manually.)
-
----
-
-## Standalone CLI mode
-
-Run without a browser using files on disk:
-
-```bash
-# Put screenshots (sorted alphabetically = order 1, 2, 3…) in the same folder
-# Put your annotated transcript in demo_transcript.md
-python generate_voiceover.py
-# Output: demo_AI_Voiceover.mp4
-```
+The Python files (`generate_voiceover.py`, `audio_utils.py`, `requirements.txt`, `START_VOICEOVER_TOOL.bat`) are included for users who prefer a local Python backend that generates MP4 instead of WebM.
 
 ---
 
