@@ -2,7 +2,7 @@
 
 Generate perfectly synced AI-voiceover demo videos from **screenshots + a plain-text transcript** — no installation, no backend, no dependencies.
 
-**[▶ Open the tool](https://YOUR_USERNAME.github.io/voiceover-tool/voiceover_tool.html)**
+**[▶ Open the tool](https://sheetal-singh88.github.io/RecordingWithVoiceOver/voiceover_tool.html)**
 
 ---
 
@@ -34,7 +34,7 @@ The pipeline for each `[screenshot:N]` segment:
 
 1. Fork this repository
 2. Go to **Settings → Pages → Source: Deploy from branch → `main` → `/` (root)**
-3. Visit `https://YOUR_USERNAME.github.io/voiceover-tool/voiceover_tool.html`
+3. Visit `https://sheetal-singh88.github.io/RecordingWithVoiceOver/voiceover_tool.html`
 4. Share that URL with anyone — it works in Chrome or Edge with no installation
 
 ### Option B — Local file
