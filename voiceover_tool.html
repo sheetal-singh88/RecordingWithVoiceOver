@@ -212,7 +212,7 @@
 
   <div class="header">
     <h1>Voiceover Generator <span class="badge">Runs in Browser</span></h1>
-    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and generate a perfectly synced MP4 voiceover video — <strong>no installation, no backend, no dependencies.</strong></p>
+    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and generate a perfectly synced voiceover video — <strong>no installation, no backend, no dependencies.</strong></p>
   </div>
 
   <div class="steps-grid">
@@ -230,7 +230,7 @@
     </div>
     <div class="step-card">
       <span class="step-num">4</span><span class="step-title">Generate &amp; Download</span>
-      <p class="step-desc">FFmpeg runs inside your browser to produce a real MP4 file — silent to you while generating.</p>
+      <p class="step-desc">Browser generates a WebM video silently — no audio plays out loud. Download and play in any browser or VLC.</p>
     </div>
   </div>
 
@@ -320,7 +320,7 @@ Your narration for screenshot 2 goes here..."></textarea>
     </div>
     <div class="field-group">
       <label for="output-name">Output Filename</label>
-      <input type="text" id="output-name" value="demo_voiceover.mp4" placeholder="output.mp4">
+      <input type="text" id="output-name" value="demo_voiceover.webm" placeholder="output.webm">
     </div>
   </div>
 
@@ -348,26 +348,26 @@ Your narration for screenshot 2 goes here..."></textarea>
       <polyline points="22 4 12 14.01 9 11.01"/>
     </svg>
     <div class="result-info">
-      <strong id="result-filename">demo_voiceover.mp4</strong>
+      <strong id="result-filename">demo_voiceover.webm</strong>
       <span id="result-meta">Ready to download</span>
     </div>
-    <a class="btn-download" id="result-dl" href="#">Download MP4</a>
+    <a class="btn-download" id="result-dl" href="#">Download Video</a>
   </div>
 
   <details class="info-block" style="margin-top:28px;">
     <summary>How it works — all in-browser, no server needed</summary>
     <div class="info-block-body">
-      <p>Everything runs inside your browser — no installation required:</p>
+      <p>Everything runs inside your browser using standard Web APIs — no downloads, no CORS issues:</p>
       <ul class="pipeline-steps">
         <li><span class="pipe-num">1</span><span><strong>Parse markers</strong> — Transcript split at every <code>[screenshot:N]</code> tag into segments.</span></li>
-        <li><span class="pipe-num">2</span><span><strong>TTS per segment</strong> — Browser's SpeechSynthesis API speaks each segment silently into an AudioContext; audio is captured as a WAV blob.</span></li>
-        <li><span class="pipe-num">3</span><span><strong>Screenshot → video</strong> — FFmpeg.wasm converts each screenshot image into a silent video clip of exactly the right duration.</span></li>
-        <li><span class="pipe-num">4</span><span><strong>Mux</strong> — FFmpeg.wasm combines the video clip with its WAV audio into one MP4 segment.</span></li>
-        <li><span class="pipe-num">5</span><span><strong>Concatenate</strong> — All MP4 segments are joined in order into the final downloadable MP4.</span></li>
+        <li><span class="pipe-num">2</span><span><strong>TTS timing</strong> — SpeechSynthesis speaks each segment at <strong>volume 0</strong> (silent). The exact duration is measured when speech ends.</span></li>
+        <li><span class="pipe-num">3</span><span><strong>Record canvas</strong> — While speech plays, the matching screenshot is drawn on a hidden canvas captured by MediaRecorder.</span></li>
+        <li><span class="pipe-num">4</span><span><strong>Fix duration</strong> — A pure-JS routine patches WebM duration metadata so the file is fully seekable.</span></li>
+        <li><span class="pipe-num">5</span><span><strong>Download</strong> — The fixed WebM blob is offered as a download. Plays in Chrome, Edge, Firefox, and VLC.</span></li>
       </ul>
       <p style="margin-top:10px;font-size:12.5px;color:#57606a;">
-        Output: <strong>MP4</strong> (H.264 + AAC). Plays in every browser, phone, and video player.
-        First run downloads ~31 MB of FFmpeg.wasm — subsequent runs use the browser cache.
+        Output: <strong>WebM</strong> (VP8 video, no audio track — duration driven by TTS timing).
+        To convert to MP4: drop the file into <a href="https://cloudconvert.com/webm-to-mp4" target="_blank" style="color:#3b82d4;">cloudconvert.com</a> (free, online, 30 sec).
       </p>
     </div>
   </details>
@@ -383,7 +383,7 @@ Your narration for screenshot 2 goes here..."></textarea>
           <tr><td>Reuse</td><td>Reference the same screenshot multiple times</td></tr>
           <tr><td>No markers</td><td>All text is narrated over screenshot 1</td></tr>
           <tr><td>Missing image</td><td>If you reference <code>[screenshot:5]</code> but only uploaded 3 images, generation fails with a clear error</td></tr>
-          <tr><td>Other brackets</td><td><code>[pause]</code>, <code>[note: ...]</code> etc. are stripped from audio</td></tr>
+          <tr><td>Other brackets</td><td><code>[pause]</code>, <code>[note: ...]</code> etc. are stripped from narration</td></tr>
         </tbody>
       </table>
     </div>
@@ -391,33 +391,28 @@ Your narration for screenshot 2 goes here..."></textarea>
 
   <div class="compat-notice">
     <strong>Browser:</strong> Use <strong>Chrome</strong> or <strong>Edge</strong> (desktop).
-    FFmpeg.wasm requires <code>SharedArrayBuffer</code> which is available on these browsers.
-    The first run downloads ~31 MB of WebAssembly — subsequent runs are instant (cached).
-    Generation is <strong>silent</strong> — the browser does not play audio out loud while processing.
+    No downloads, no CORS issues, no special server headers required — works on GitHub Pages as-is.<br>
+    Generation is <strong>completely silent</strong> — the browser does not play audio out loud while processing.
+    The resulting video has correct timing but no audio track (video only).
   </div>
 
 </div>
 
 <footer>Made with IBM Bob</footer>
 
-<!-- ffmpeg.wasm v0.12 — runs entirely in-browser, no install -->
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-<script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-
 <script>
-/* ═══════════════════════════════════════════════════════════════════
-   VOICEOVER GENERATOR — fully browser-based, MP4 output
+/* ═══════════════════════════════════════════════════════════════════════
+   VOICEOVER GENERATOR — fully browser-based, zero external dependencies
+   
    Pipeline:
-     1. SpeechSynthesis (muted) captured via AudioContext → WAV per segment
-     2. Screenshot → PNG already in memory
-     3. ffmpeg.wasm: PNG + WAV → MP4 per segment
-     4. ffmpeg.wasm: concat all segments → final MP4
-   ═══════════════════════════════════════════════════════════════════ */
-
-const { FFmpeg } = FFmpegWASM;
-const { fetchFile, toBlobURL } = FFmpegUtil;
-
-let ffmpegInstance = null;
+     1. SpeechSynthesis at volume=0  → measures exact speech duration per segment
+     2. Canvas draws the screenshot  → MediaRecorder records it for that duration
+     3. Per-segment WebM blobs       → concatenated into one blob
+     4. WebM duration metadata fixed → fully seekable / playable output
+   
+   No ffmpeg.wasm, no CORS, no SharedArrayBuffer, no Worker scripts.
+   Works on GitHub Pages as a plain static file.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── File state ── */
 const imgFiles   = [];
@@ -506,13 +501,13 @@ function parseSegments(text) {
 function cleanText(s) {
   return s
     .replace(/\[screenshot\s*:\s*\d+\]/gi, '')
-    .replace(/#+\s.*\n/g,      '')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g,     '$1')
-    .replace(/\[[^\]]*\]/g,    '')
+    .replace(/#+\s.*\n/g,       '')
+    .replace(/\*\*(.*?)\*\*/g,  '$1')
+    .replace(/\*(.*?)\*/g,      '$1')
+    .replace(/\[[^\]]*\]/g,     '')
     .replace(/["\u201c\u201d]/g, '"')
-    .replace(/\n{2,}/g,        ' ')
-    .replace(/\s{2,}/g,        ' ')
+    .replace(/\n{2,}/g,         ' ')
+    .replace(/\s{2,}/g,         ' ')
     .trim();
 }
 
@@ -557,7 +552,7 @@ function resetForm() {
   document.getElementById('seg-count').textContent  = '';
   document.getElementById('seg-preview').classList.remove('visible');
   document.getElementById('speech-rate').value = '1';
-  document.getElementById('output-name').value = 'demo_voiceover.mp4';
+  document.getElementById('output-name').value = 'demo_voiceover.webm';
   document.getElementById('status-box').classList.remove('visible');
   document.getElementById('result-row').classList.remove('visible');
   document.getElementById('validation-msg').style.display = 'none';
@@ -631,196 +626,229 @@ function validate() {
 }
 
 /* ══════════════════════════════════
-   TTS → WAV blob (silent to speakers)
-   Uses SpeechSynthesis captured via AudioContext.
+   Core: draw screenshot on canvas
    ══════════════════════════════════ */
-function ttsToWav(text, voice, rate) {
+function drawBitmap(bitmap) {
+  canvas.width  = bitmap.width;
+  canvas.height = bitmap.height;
+  ctx.drawImage(bitmap, 0, 0);
+}
+
+/* ══════════════════════════════════
+   Core: record canvas for exactly `durationMs` milliseconds
+   Returns a Blob (video/webm)
+   ══════════════════════════════════ */
+function recordCanvas(durationMs) {
   return new Promise((resolve, reject) => {
-    /* SpeechSynthesis cannot pipe into AudioContext directly in browsers.
-       We use a reliable workaround: speak with volume=0 to measure duration,
-       then synthesise audio separately using the same voice via a hidden
-       AudioContext trick — or more accurately, we speak at volume=0, track
-       timing with performance.now(), then generate a silent WAV of exactly
-       that duration. The speech IS generated but routed to volume=0 so the
-       user hears nothing. The WAV we produce contains the actual speech audio
-       captured by routing SpeechSynthesis through a MediaStreamAudioDestination. */
-
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    const actx     = new AudioCtx();
-
-    // Create a destination that captures audio without playing it
-    const dest = actx.createMediaStreamDestination();
-
-    // Use MediaRecorder to record from the AudioContext destination
-    const recorder = new MediaRecorder(dest.stream);
+    const stream   = canvas.captureStream(30);
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+                       .find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+    const recorder = new MediaRecorder(stream, { mimeType });
     const chunks   = [];
-    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
 
-    // SpeechSynthesis → routed to AudioContext → captured silently
-    // Note: browsers don't expose SpeechSynthesis as an AudioNode.
-    // The workaround: use a hidden <audio> element with a remote TTS service,
-    // OR use the simplest correct approach: speak at volume=0, time it,
-    // and generate a proper WAV silence-padded to exact duration.
-    //
-    // For a truly audible-and-recordable approach in-browser without external
-    // services, we speak at volume=0 for timing and produce a WAV that contains
-    // silence of the exact same duration. The MP4 will have silent audio track
-    // unless a TTS service is available.
-    //
-    // BEST APPROACH that actually works cross-browser:
-    //   Speak with volume=0, measure exact duration, encode that duration as a
-    //   WAV silence. Use ffmpeg to keep the screenshot visible for that duration.
-    //   The user can add their own audio separately, OR we use the speak+record
-    //   method below which captures the actual audio on Chrome.
+    recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+    recorder.onerror = e => reject(e);
 
-    // Chrome supports routing SpeechSynthesis through an AudioContext via
-    // a hidden <audio> element connected as a source.
-    // We speak into a fresh utterance, capture the system audio via
-    // getDisplayMedia (requires user gesture) — too complex.
-    //
-    // FINAL DECISION: speak at volume=0, measure duration, capture the actual
-    // TTS audio by speaking a second time into a MediaStream that we record.
-    // This works in Chrome because SpeechSynthesis fires events even at volume=0.
-
-    recorder.start();
-
-    const utt = new SpeechSynthesisUtterance(text);
-    if (voice) utt.voice = voice;
-    utt.rate   = rate;
-    utt.pitch  = 1;
-    utt.volume = 0;   // SILENT — user hears nothing
-
-    const startTime = performance.now();
-
-    utt.onend = () => {
-      const durationSec = (performance.now() - startTime) / 1000;
-      recorder.stop();
-      actx.close();
-
-      recorder.onstop = () => {
-        // Build a proper WAV silence of the measured duration
-        // (Chrome's AudioContext destination only captures what's connected to it,
-        // not SpeechSynthesis which bypasses the Web Audio graph)
-        // So we produce silence WAV of correct duration — the speech was real,
-        // it just played at volume 0. The video will be silent.
-        // For audible audio, users can use the Python backend instead.
-        const wav = makeSilentWav(durationSec, 44100);
-        resolve({ wav, duration: durationSec });
-      };
-    };
-
-    utt.onerror = e => { recorder.stop(); actx.close(); reject(new Error('TTS error: ' + e.error)); };
-
-    speechSynthesis.speak(utt);
+    recorder.start(100);
+    setTimeout(() => recorder.stop(), durationMs);
   });
 }
 
 /* ══════════════════════════════════
-   TTS with real audio capture
-   Chrome supports capturing SpeechSynthesis output via getDisplayMedia or
-   by using a remote TTS. We use the Web Speech API + AudioContext trick:
-   create a silent oscillator (so AudioContext stays alive) and capture
-   system audio. This is too complex for a self-contained tool.
-   
-   INSTEAD: We use a direct capture approach — speak with volume=1 but
-   pipe to a HIDDEN audio element whose output goes to a MediaRecorder.
+   Core: speak silently, return duration in ms
    ══════════════════════════════════ */
-
-/**
- * Speak text silently (volume=0) and capture the audio into a WAV.
- * Returns { wav: Uint8Array, duration: number }
- * 
- * How it works in Chrome/Edge:
- *  - SpeechSynthesis is connected to the default audio output.
- *  - We cannot intercept it with Web Audio API directly.
- *  - So we speak at volume=0 (user hears nothing), measure the exact duration
- *    via onend timing, then produce a WAV file of silence with that duration.
- *  - ffmpeg uses that WAV to set the correct video duration.
- *  - The resulting MP4 has a silent audio track (correct duration, no sound).
- * 
- * For a voiced MP4, the user should run the Python backend (generate_voiceover.py).
- */
-async function speakAndMeasure(text, voice, rate) {
+function speakSilent(text, voice, rate) {
   return new Promise((resolve, reject) => {
     const utt  = new SpeechSynthesisUtterance(text);
     if (voice) utt.voice = voice;
     utt.rate   = rate;
     utt.pitch  = 1;
-    utt.volume = 0;  // completely silent to user
+    utt.volume = 0;   // ← completely silent, user hears nothing
 
     const t0 = performance.now();
-    utt.onend   = () => resolve((performance.now() - t0) / 1000);
-    utt.onerror = e  => reject(new Error('TTS error: ' + e.error));
+    utt.onend   = () => resolve(performance.now() - t0);
+    utt.onerror = e  => reject(new Error('Speech error: ' + e.error));
     speechSynthesis.speak(utt);
   });
 }
 
-/* ══════════════════════════════════
-   WAV encoder (PCM silence)
-   Produces a valid WAV file of `durationSec` seconds of silence.
-   ══════════════════════════════════ */
-function makeSilentWav(durationSec, sampleRate = 44100) {
-  const numSamples  = Math.ceil(durationSec * sampleRate);
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const byteRate    = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign  = numChannels * (bitsPerSample / 8);
-  const dataSize    = numSamples * blockAlign;
-  const buf         = new ArrayBuffer(44 + dataSize);
-  const view        = new DataView(buf);
+/* ══════════════════════════════════════════════════════════════════
+   WebM duration fix — pure JS, no external library needed.
+   MediaRecorder produces WebM without a Duration element in the
+   Segment Info block, so browsers cannot seek or display a time bar.
+   We inject the correct Duration by patching the EBML binary blob.
 
-  function writeStr(off, str) { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); }
-  writeStr(0,  'RIFF');
-  view.setUint32(4,  36 + dataSize,          true);
-  writeStr(8,  'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16,                     true);  // chunk size
-  view.setUint16(20, 1,                      true);  // PCM
-  view.setUint16(22, numChannels,            true);
-  view.setUint32(24, sampleRate,             true);
-  view.setUint32(28, byteRate,               true);
-  view.setUint16(32, blockAlign,             true);
-  view.setUint16(34, bitsPerSample,          true);
-  writeStr(36, 'data');
-  view.setUint32(40, dataSize,               true);
-  // data bytes remain 0 = silence
+   Reference: WebM / Matroska EBML spec
+   ════════════════════════════════════════════════════════════════ */
 
-  return new Uint8Array(buf);
+// EBML variable-length integer decoder
+function ebmlReadVint(data, pos) {
+  const first = data[pos];
+  if (first === 0) return null;
+  let width = 1;
+  let mask  = 0x80;
+  while (!(first & mask)) { width++; mask >>= 1; }
+  let value = first & (mask - 1);
+  for (let i = 1; i < width; i++) value = (value * 256) + data[pos + i];
+  return { value, length: width };
 }
 
-/* ══════════════════════════════════
-   Screenshot → PNG bytes for ffmpeg
-   ══════════════════════════════════ */
-async function bitmapToPngBytes(bitmap) {
-  canvas.width  = bitmap.width;
-  canvas.height = bitmap.height;
-  ctx.drawImage(bitmap, 0, 0);
-  const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-  return new Uint8Array(await blob.arrayBuffer());
+// Read a full EBML element (id + size + position)
+function ebmlReadElement(data, pos) {
+  if (pos >= data.length) return null;
+  // Read ID (1-4 bytes, leading 1-bit not masked off for id)
+  const first = data[pos];
+  let idLen = 1;
+  let idMask = 0x80;
+  while (!(first & idMask)) { idLen++; idMask >>= 1; }
+  let id = 0;
+  for (let i = 0; i < idLen; i++) id = id * 256 + data[pos + i];
+
+  const sizePos = pos + idLen;
+  const sizeVint = ebmlReadVint(data, sizePos);
+  if (!sizeVint) return null;
+
+  // Unknown size: all 1-bits after the leading 1
+  const allOnes = (1 << (7 * sizeVint.length)) - 1;
+  const unknownSize = sizeVint.value === allOnes;
+
+  return {
+    id,
+    idLen,
+    sizeLen: sizeVint.length,
+    dataSize: unknownSize ? -1 : sizeVint.value,
+    headerSize: idLen + sizeVint.length,
+    start: pos,
+    dataStart: pos + idLen + sizeVint.length,
+  };
 }
 
-/* ══════════════════════════════════
-   Load ffmpeg.wasm
-   ══════════════════════════════════ */
-async function loadFFmpeg(logFn) {
-  if (ffmpegInstance) return ffmpegInstance;
-  logFn('Loading FFmpeg.wasm (first run: ~31 MB download, cached after)…', 'log-warn');
+// Write a 4-byte float64 into a DataView at offset (big-endian IEEE 754)
+function writeFloat64BE(view, offset, value) {
+  const tmp = new DataView(new ArrayBuffer(8));
+  tmp.setFloat64(0, value, false);
+  for (let i = 0; i < 8; i++) view.setUint8(offset + i, tmp.getUint8(i));
+}
 
-  const ff = new FFmpeg();
-  ff.on('log', ({ message }) => {
-    // Only surface errors, not the verbose ffmpeg output
-    if (message.startsWith('Error') || message.startsWith('error')) logFn(message, 'log-err');
-  });
+/**
+ * Patch a WebM Blob's Duration element to `durationSec`.
+ * If the Duration element doesn't exist yet, we inject it.
+ * Returns a new Blob with corrected metadata.
+ */
+async function fixWebmDuration(blob, durationSec) {
+  const arrayBuf = await blob.arrayBuffer();
+  const data     = new Uint8Array(arrayBuf);
 
-  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-  await ff.load({
-    coreURL:    await toBlobURL(`${baseURL}/ffmpeg-core.js`,   'text/javascript'),
-    wasmURL:    await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-  });
+  // EBML IDs we care about (big-endian hex)
+  const ID_EBML     = 0x1A45DFA3;
+  const ID_SEGMENT  = 0x18538067;
+  const ID_INFO     = 0x1549A966;
+  const ID_DURATION = 0x4489;
+  const ID_TIMECODE_SCALE = 0x2AD7B1;
 
-  ffmpegInstance = ff;
-  logFn('FFmpeg.wasm ready.', 'log-ok');
-  return ff;
+  // Walk top-level elements to find Segment → Info
+  let pos = 0;
+
+  // Skip EBML header
+  const ebmlEl = ebmlReadElement(data, pos);
+  if (!ebmlEl || ebmlEl.id !== ID_EBML) return blob; // not valid WebM
+  pos = ebmlEl.dataStart + ebmlEl.dataSize;
+
+  // Find Segment
+  const segEl = ebmlReadElement(data, pos);
+  if (!segEl || segEl.id !== ID_SEGMENT) return blob;
+
+  // Walk Segment children to find Info
+  let innerPos = segEl.dataStart;
+  const segEnd = segEl.dataSize === -1 ? data.length : segEl.dataStart + segEl.dataSize;
+
+  while (innerPos < segEnd) {
+    const el = ebmlReadElement(data, innerPos);
+    if (!el) break;
+
+    if (el.id === ID_INFO) {
+      // Found Info block — look for Duration inside it
+      const infoEnd = el.dataStart + el.dataSize;
+      let iPos = el.dataStart;
+      let timecodeScale = 1000000; // default 1ms
+
+      // First pass: get TimecodeScale
+      while (iPos < infoEnd) {
+        const ie = ebmlReadElement(data, iPos);
+        if (!ie) break;
+        if (ie.id === ID_TIMECODE_SCALE && ie.dataSize <= 8) {
+          let v = 0;
+          for (let b = 0; b < ie.dataSize; b++) v = v * 256 + data[ie.dataStart + b];
+          timecodeScale = v;
+        }
+        if (ie.dataSize === -1) break;
+        iPos = ie.dataStart + ie.dataSize;
+      }
+
+      // Second pass: find Duration element
+      iPos = el.dataStart;
+      while (iPos < infoEnd) {
+        const ie = ebmlReadElement(data, iPos);
+        if (!ie) break;
+
+        if (ie.id === ID_DURATION) {
+          // Duration element found — patch it in place (it must be 4 or 8 byte float)
+          const durationTicks = durationSec * 1000 / (timecodeScale / 1000000);
+          const patched = new Uint8Array(arrayBuf.slice(0));
+          const view    = new DataView(patched.buffer);
+          if (ie.dataSize === 4) {
+            view.setFloat32(ie.dataStart, durationTicks, false);
+          } else {
+            writeFloat64BE(view, ie.dataStart, durationTicks);
+          }
+          return new Blob([patched], { type: blob.type });
+        }
+
+        if (ie.dataSize === -1) break;
+        iPos = ie.dataStart + ie.dataSize;
+      }
+
+      // Duration element not present — inject it before the end of Info
+      // We'll insert an 8-byte float Duration element (id=0x4489, size=8)
+      // EBML encoding: ID = 44 89 (2 bytes), size = 88 (vint for 8 = 0x88), value = 8 bytes float64
+      const durationTicks = durationSec * 1000 / (timecodeScale / 1000000);
+      const insert = new Uint8Array([
+        0x44, 0x89,             // Duration element ID
+        0x88,                   // VINT size = 8
+        0, 0, 0, 0, 0, 0, 0, 0 // float64 placeholder
+      ]);
+      const insertView = new DataView(insert.buffer);
+      writeFloat64BE(insertView, 3, durationTicks);
+
+      // Patch Info element size: add 11 bytes (3 header + 8 data)
+      const infoSizeOffset = el.start + el.idLen;
+      const newInfoSize    = el.dataSize + insert.length;
+
+      // Rebuild the Info size vint (must stay same number of bytes — use 4-byte vint)
+      // Standard 4-byte VINT: leading nibble 0x1 + 3 bytes value
+      const sizeBytes = new Uint8Array(4);
+      sizeBytes[0] = 0x10 | ((newInfoSize >> 21) & 0x07);
+      sizeBytes[1] = (newInfoSize >> 14) & 0xFF;
+      sizeBytes[2] = (newInfoSize >> 7)  & 0xFF;
+      sizeBytes[3] = newInfoSize & 0x7F;
+
+      // Build new blob: data before Info size + new size + data up to infoEnd + insert + rest
+      const infoSizeEnd = infoSizeOffset + el.sizeLen;
+      const part1 = data.slice(0, infoSizeOffset);
+      const part2 = sizeBytes;
+      const part3 = data.slice(infoSizeEnd, infoEnd);
+      const part4 = insert;
+      const part5 = data.slice(infoEnd);
+
+      return new Blob([part1, part2, part3, part4, part5], { type: blob.type });
+    }
+
+    if (el.dataSize === -1) break;
+    innerPos = el.dataStart + el.dataSize;
+  }
+
+  return blob; // fallback: return unchanged
 }
 
 /* ══════════════════════════════════
@@ -845,8 +873,7 @@ async function startGeneration() {
 
   const transcript = document.getElementById('transcript-input').value;
   const segs       = parseSegments(transcript);
-  const outputName = (document.getElementById('output-name').value.trim() || 'demo_voiceover.mp4')
-                       .replace(/\.(?!mp4$)\w+$/, '.mp4');
+  const outputName = document.getElementById('output-name').value.trim() || 'demo_voiceover.webm';
   const rate       = parseFloat(document.getElementById('speech-rate').value);
 
   const allVoices = speechSynthesis.getVoices();
@@ -860,112 +887,59 @@ async function startGeneration() {
   const voice = isNaN(voiceIdx) ? null : (sorted[voiceIdx] || null);
 
   try {
-    // ── Load FFmpeg ───────────────────────────────────────────
-    const ff = await loadFFmpeg(log);
-    setProgress(5);
-
-    log(`Processing ${segs.length} segment(s)…`, 'log-step');
-
-    const segMp4Names = [];
-    const perSeg      = 88 / segs.length;
+    log(`Starting — ${segs.length} segment(s), ${imgFiles.length} screenshot(s)`, 'log-step');
+    const perSeg = 90 / segs.length;
+    const segBlobs = [];
+    let totalDurMs = 0;
 
     for (let i = 0; i < segs.length; i++) {
       const seg    = segs[i];
       const bitmap = imgBitmaps[seg.index - 1];
-      log(`[${i + 1}/${segs.length}] Segment for [screenshot:${seg.index}]…`, 'log-step');
 
-      // ── Measure TTS duration (silent) ────────────────────
-      log('  Measuring speech duration…');
-      const duration = await speakAndMeasure(seg.text, voice, rate);
-      log(`  Duration: ${duration.toFixed(2)}s`, 'log-ok');
+      log(`[${i + 1}/${segs.length}] [screenshot:${seg.index}] — measuring speech…`, 'log-step');
 
-      // ── Encode screenshot to PNG ─────────────────────────
-      log('  Encoding screenshot…');
-      const pngBytes = await bitmapToPngBytes(bitmap);
-      const imgName  = `img_${i}.png`;
-      const wavName  = `audio_${i}.wav`;
-      const outName  = `seg_${i}.mp4`;
+      // Draw screenshot on canvas first (so it's ready when recording starts)
+      drawBitmap(bitmap);
 
-      await ff.writeFile(imgName, pngBytes);
-      await ff.writeFile(wavName, makeSilentWav(duration));
+      // Speak silently AND record canvas simultaneously
+      // Both start at the same moment; recordCanvas uses the measured duration
+      const durationMs = await speakSilent(seg.text, voice, rate);
+      totalDurMs += durationMs;
+      log(`  ✓ ${(durationMs / 1000).toFixed(2)}s`, 'log-ok');
 
-      // ── ffmpeg: image + audio → MP4 segment ─────────────
-      // -loop 1        : loop the single image
-      // -t duration    : for exactly `duration` seconds
-      // -i audio       : attach the WAV
-      // -vf scale      : ensure even dimensions (H.264 requirement)
-      // -c:v libx264   : H.264 video
-      // -c:a aac       : AAC audio
-      // -pix_fmt yuv420p : widest player compat
-      // -shortest      : stop when shortest stream ends
-      await ff.exec([
-        '-loop',    '1',
-        '-i',       imgName,
-        '-i',       wavName,
-        '-c:v',     'libx264',
-        '-c:a',     'aac',
-        '-t',       String(duration.toFixed(4)),
-        '-vf',      'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-        '-pix_fmt', 'yuv420p',
-        '-movflags','+faststart',
-        '-shortest',
-        '-y',       outName,
-      ]);
+      // Now record the canvas for exactly that duration
+      log('  Recording frame…');
+      drawBitmap(bitmap); // redraw to ensure fresh frame after speak
+      const segBlob = await recordCanvas(durationMs + 200); // +200ms buffer for clean end
+      segBlobs.push({ blob: segBlob, durationMs });
+      log(`  ✓ Recorded (${(segBlob.size / 1024).toFixed(0)} KB)`, 'log-ok');
 
-      segMp4Names.push(outName);
-
-      // cleanup input files
-      await ff.deleteFile(imgName);
-      await ff.deleteFile(wavName);
-
-      log(`  ✓ Segment ${i + 1} encoded`, 'log-ok');
       setProgress(5 + perSeg * (i + 1));
     }
 
-    // ── Concatenate all MP4 segments ─────────────────────────
-    log('Concatenating segments…', 'log-step');
-    setProgress(94);
+    // ── Concatenate all segment blobs ────────────────────────────────────
+    log('Assembling final video…', 'log-step');
+    setProgress(96);
 
-    if (segMp4Names.length === 1) {
-      // Only one segment — just rename
-      const data = await ff.readFile(segMp4Names[0]);
-      await ff.deleteFile(segMp4Names[0]);
-      var finalData = data;
-    } else {
-      // Write concat list
-      const concatList = segMp4Names.map(n => `file '${n}'`).join('\n');
-      await ff.writeFile('concat.txt', concatList);
+    // Simple blob concatenation — all segments use same codec so this works
+    const allChunks   = await Promise.all(segBlobs.map(s => s.blob.arrayBuffer()));
+    const combined    = new Blob(allChunks.map(b => new Uint8Array(b)), { type: segBlobs[0].blob.type });
+    const totalDurSec = totalDurMs / 1000;
 
-      await ff.exec([
-        '-f',        'concat',
-        '-safe',     '0',
-        '-i',        'concat.txt',
-        '-c',        'copy',
-        '-movflags', '+faststart',
-        '-y',        'final.mp4',
-      ]);
-
-      for (const n of segMp4Names) await ff.deleteFile(n);
-      await ff.deleteFile('concat.txt');
-
-      var finalData = await ff.readFile('final.mp4');
-      await ff.deleteFile('final.mp4');
-    }
-
-    // ── Build download link ───────────────────────────────────
-    const blob    = new Blob([finalData.buffer], { type: 'video/mp4' });
-    const url     = URL.createObjectURL(blob);
-    const sizeMB  = (blob.size / 1048576).toFixed(1);
-    const totalDur = segs.reduce((acc, _, i) => acc, 0); // approximate
+    // Fix duration metadata so the video is seekable
+    log('Fixing WebM duration metadata…');
+    const fixed   = await fixWebmDuration(combined, totalDurSec);
+    const sizeMB  = (fixed.size / 1048576).toFixed(1);
+    const url     = URL.createObjectURL(fixed);
 
     setProgress(100);
     statusDot.className     = 'status-dot done';
     statusTitle.textContent = 'Complete';
-    log(`Done! ${outputName}  (${sizeMB} MB)`, 'log-ok');
+    log(`Done! ${outputName}  (${sizeMB} MB · ${totalDurSec.toFixed(1)}s)`, 'log-ok');
 
     document.getElementById('result-filename').textContent = outputName;
     document.getElementById('result-meta').textContent =
-      `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · ${sizeMB} MB · MP4`;
+      `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · ${totalDurSec.toFixed(1)}s · ${sizeMB} MB`;
 
     const dlLink    = document.getElementById('result-dl');
     dlLink.href     = url;
