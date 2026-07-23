@@ -979,10 +979,27 @@ async function startGeneration() {
 
     log(`Canvas: ${canvas.width}×${canvas.height}  |  ${FPS} fps  |  ${segs.length} segment(s)`, 'log-step');
 
-    // ── Set up VideoEncoder + chunk collector ───────────────────────────
+    // ── Step 1: Measure all TTS durations FIRST (encoder not yet created) ──
+    log('Measuring speech durations (silent)…', 'log-step');
+    setProgress(5);
+    const durations = [];
+    for (let i = 0; i < segs.length; i++) {
+      const ms = await speakSilent(segs[i].text, voice, rate);
+      durations.push(ms);
+      log(`  Segment ${i + 1}: ${(ms / 1000).toFixed(2)}s`, 'log-ok');
+    }
+    const totalMs = durations.reduce((a, b) => a + b, 0);
+    log(`Total duration: ${(totalMs / 1000).toFixed(1)}s`, 'log-ok');
+    setProgress(38);
+
+    // ── Step 2: Create VideoEncoder NOW (right before encoding starts) ──
+    // Important: do NOT create it before the await speakSilent() calls —
+    // Chrome closes an idle VideoEncoder after a few seconds with no frames.
     const encodedChunks = [];
+    let encodeError = null;
+
     const encoder = new VideoEncoder({
-      output: (chunk, meta) => {
+      output: (chunk) => {
         const data = new Uint8Array(chunk.byteLength);
         chunk.copyTo(data);
         encodedChunks.push({
@@ -992,50 +1009,39 @@ async function startGeneration() {
           type:      chunk.type,
         });
       },
-      error: e => { throw e; },
+      error: (e) => { encodeError = e; },
     });
 
     await encoder.configure({
-      codec:        'avc1.42001f',  // H.264 Baseline Level 3.1
-      width:        canvas.width,
-      height:       canvas.height,
-      bitrate:      4_000_000,      // 4 Mbps — high quality for screenshots
-      framerate:    FPS,
-      latencyMode:  'realtime',     // process frames immediately, no buffering
+      codec:       'avc1.42001f',   // H.264 Baseline Level 3.1
+      width:       canvas.width,
+      height:      canvas.height,
+      bitrate:     4_000_000,
+      framerate:   FPS,
+      latencyMode: 'realtime',
     });
-
-    log('VideoEncoder ready (H.264 AVC)', 'log-ok');
-    setProgress(5);
-
-    // ── Measure TTS durations first (all silent) ────────────────────────
-    log('Measuring speech durations (silent)…', 'log-step');
-    const durations = [];
-    for (let i = 0; i < segs.length; i++) {
-      const ms = await speakSilent(segs[i].text, voice, rate);
-      durations.push(ms);
-      log(`  Segment ${i + 1}: ${(ms / 1000).toFixed(2)}s`, 'log-ok');
-    }
-    const totalMs = durations.reduce((a, b) => a + b, 0);
-    log(`Total duration: ${(totalMs / 1000).toFixed(1)}s`, 'log-ok');
+    log('VideoEncoder ready — encoding frames…', 'log-ok');
     setProgress(40);
 
-    // ── Encode video frames for each segment ───────────────────────────
-    log('Encoding video frames…', 'log-step');
+    // ── Step 3: Encode video frames for each segment ────────────────────
     let timestampUs = 0;
     const perSeg = 50 / segs.length;
 
     for (let i = 0; i < segs.length; i++) {
+      if (encodeError) throw encodeError;
       const seg    = segs[i];
       const bitmap = imgBitmaps[seg.index - 1];
       log(`  [${i + 1}/${segs.length}] [screenshot:${seg.index}] — ${Math.round(durations[i]/1000 * FPS)} frames`, 'log-step');
       timestampUs = await encodeSegment(bitmap, durations[i], timestampUs, encoder);
+      if (encodeError) throw encodeError;
       setProgress(40 + perSeg * (i + 1));
     }
 
-    // ── Flush encoder ───────────────────────────────────────────────────
+    // ── Step 4: Flush and close encoder ────────────────────────────────
     log('Flushing encoder…', 'log-step');
     setProgress(92);
     await encoder.flush();
+    if (encodeError) throw encodeError;
     encoder.close();
 
     // ── Mux into MP4 ────────────────────────────────────────────────────
