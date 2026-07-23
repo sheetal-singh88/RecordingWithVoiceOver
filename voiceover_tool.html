@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voiceover Generator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.6;
+    background: #ffffff; color: #1f2328; min-height: 100vh;
+  }
+  .page-wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 48px; }
+
+  /* Header */
+  .header { border-bottom: 1px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 28px; }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header p  { margin-top: 6px; color: #57606a; font-size: 13.5px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+    background: #f7f8fa; border: 1px solid #e5e7eb; color: #57606a;
+    margin-left: 8px; vertical-align: middle;
+  }
+
+  /* Steps */
+  .steps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+  @media (max-width: 520px) { .steps-grid { grid-template-columns: 1fr; } }
+  .step-card { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; }
+  .step-num {
+    display: inline-block; width: 22px; height: 22px; line-height: 22px;
+    text-align: center; border-radius: 50%; background: #3b82d4;
+    color: #fff; font-size: 11px; font-weight: 700; margin-right: 6px;
+  }
+  .step-title { font-weight: 600; font-size: 13px; }
+  .step-desc  { font-size: 12.5px; color: #57606a; margin-top: 5px; }
+
+  /* Section label */
+  .section-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #57606a; margin-bottom: 10px; margin-top: 26px;
+  }
+
+  /* Upload zones */
+  .upload-zone {
+    border: 2px dashed #d1d5db; border-radius: 8px; background: #f7f8fa;
+    padding: 28px 20px; text-align: center; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s; position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: #3b82d4; background: #f0f6ff; }
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { width: 36px; height: 36px; margin: 0 auto 8px; color: #9ca3af; }
+  .uz-title { font-size: 14px; font-weight: 600; color: #1f2328; }
+  .uz-hint  { font-size: 12px; color: #57606a; margin-top: 3px; }
+
+  .file-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .file-chip {
+    display: flex; align-items: center; gap: 5px;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 4px;
+    padding: 3px 8px; font-size: 12px; color: #1f2328;
+  }
+  .file-chip .idx-label {
+    font-size: 10px; font-weight: 700; color: #fff; background: #3b82d4;
+    border-radius: 3px; padding: 1px 5px; margin-right: 2px;
+  }
+  .file-chip .remove {
+    cursor: pointer; color: #9ca3af; font-size: 14px; line-height: 1;
+    border: none; background: none; padding: 0; margin-left: 2px;
+  }
+  .file-chip .remove:hover { color: #ef4444; }
+
+  /* Marker hint box */
+  .marker-hint {
+    margin-bottom: 10px; padding: 12px 14px;
+    background: #f0f6ff; border: 1px solid #bfdbfe; border-radius: 6px;
+    font-size: 12.5px; color: #1e3a5f; line-height: 1.7;
+  }
+  .marker-hint strong { color: #1d4ed8; }
+  .marker-hint pre {
+    margin-top: 8px; background: #fff; border: 1px solid #dbeafe;
+    border-radius: 4px; padding: 8px 10px;
+    font-family: "Consolas", "Menlo", monospace; font-size: 12px;
+    color: #374151; white-space: pre-wrap; line-height: 1.6;
+  }
+  .copy-btn {
+    float: right; margin-top: -2px;
+    background: #3b82d4; color: #fff; border: none; border-radius: 4px;
+    padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .copy-btn:hover { background: #2c6db5; }
+
+  /* Transcript */
+  textarea#transcript-input {
+    width: 100%; min-height: 200px; padding: 10px 12px;
+    border: 1px solid #d1d5db; border-radius: 6px;
+    font-family: "Consolas", "Menlo", monospace; font-size: 12.5px;
+    line-height: 1.65; resize: vertical; color: #1f2328; background: #fff;
+    transition: border-color 0.15s;
+  }
+  textarea#transcript-input:focus { outline: none; border-color: #3b82d4; }
+  .transcript-meta { font-size: 11.5px; color: #57606a; margin-top: 5px; text-align: right; }
+
+  /* Segment preview */
+  .seg-preview {
+    display: none; margin-top: 10px;
+    border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;
+  }
+  .seg-preview.visible { display: block; }
+  .seg-preview-header {
+    padding: 7px 12px; background: #f7f8fa; border-bottom: 1px solid #e5e7eb;
+    font-size: 12px; font-weight: 600; color: #57606a;
+  }
+  .seg-list { padding: 6px 0; max-height: 160px; overflow-y: auto; }
+  .seg-row {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 4px 12px; font-size: 12px; border-bottom: 1px solid #f3f4f6;
+  }
+  .seg-row:last-child { border-bottom: none; }
+  .seg-badge {
+    flex-shrink: 0; font-size: 10px; font-weight: 700; color: #fff;
+    background: #3b82d4; border-radius: 3px; padding: 1px 6px;
+  }
+  .seg-badge.missing { background: #ef4444; }
+  .seg-text { color: #374151; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Settings */
+  .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+  @media (max-width: 520px) { .settings-row { grid-template-columns: 1fr; } }
+  .field-group label { display: block; font-size: 12px; font-weight: 600; color: #57606a; margin-bottom: 4px; }
+  .field-group input, .field-group select {
+    width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 5px;
+    font-family: inherit; font-size: 13px; color: #1f2328; background: #fff;
+  }
+  .field-group input:focus, .field-group select:focus { outline: none; border-color: #3b82d4; }
+
+  /* Actions */
+  .action-row { margin-top: 28px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn-generate {
+    background: #3b82d4; color: #fff; border: none; border-radius: 6px;
+    padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .btn-generate:hover    { background: #2c6db5; }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary {
+    background: #fff; color: #1f2328; border: 1px solid #d1d5db; border-radius: 6px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn-secondary:hover { background: #f7f8fa; }
+
+  /* Status */
+  .status-box { display: none; margin-top: 20px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  .status-box.visible { display: block; }
+  .status-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: #f7f8fa; border-bottom: 1px solid #e5e7eb;
+    font-size: 13px; font-weight: 600;
+  }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: #9ca3af; }
+  .status-dot.running { background: #f59e0b; }
+  .status-dot.done    { background: #22c55e; }
+  .status-dot.error   { background: #ef4444; }
+  .progress-bar-wrap  { height: 4px; background: #e5e7eb; }
+  .progress-bar { height: 100%; background: #3b82d4; width: 0%; transition: width 0.4s ease; }
+  .status-log {
+    padding: 12px 14px; font-family: "Consolas", "Menlo", monospace;
+    font-size: 12px; color: #374151; background: #fff;
+    max-height: 220px; overflow-y: auto; line-height: 1.7;
+  }
+  .log-step { color: #3b82d4; font-weight: 600; }
+  .log-ok   { color: #22c55e; }
+  .log-err  { color: #ef4444; }
+  .log-warn { color: #f59e0b; }
+
+  /* Result */
+  .result-row {
+    display: none; align-items: center; gap: 12px; margin-top: 16px;
+    padding: 14px 16px; border: 1px solid #d1fae5; border-radius: 8px; background: #f0fdf4;
+  }
+  .result-row.visible { display: flex; }
+  .result-icon { color: #22c55e; flex-shrink: 0; }
+  .result-info { flex: 1; }
+  .result-info strong { font-size: 13.5px; }
+  .result-info span   { font-size: 12px; color: #57606a; display: block; }
+  .btn-download {
+    background: #22c55e; color: #fff; border: none; border-radius: 5px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer; text-decoration: none; white-space: nowrap;
+  }
+  .btn-download:hover { background: #16a34a; }
+
+  /* Info blocks */
+  .info-block { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+  .info-block summary {
+    cursor: pointer; padding: 12px 16px; font-weight: 600; font-size: 13.5px;
+    background: #f7f8fa; list-style: none; display: flex;
+    align-items: center; justify-content: space-between; user-select: none;
+  }
+  .info-block summary::after      { content: "▸"; color: #57606a; font-size: 12px; }
+  .info-block[open] summary::after{ content: "▾"; }
+  .info-block-body {
+    padding: 14px 16px; font-size: 13px; color: #374151;
+    line-height: 1.7; border-top: 1px solid #e5e7eb;
+  }
+  .pipeline-steps { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .pipeline-steps li { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; }
+  .pipe-num {
+    flex-shrink: 0; width: 20px; height: 20px; line-height: 20px; border-radius: 50%;
+    background: #e5e7eb; text-align: center; font-size: 11px; font-weight: 700; color: #57606a;
+  }
+
+  /* Requirements */
+  .req-notice {
+    margin-top: 28px; padding: 12px 14px; background: #fffbeb;
+    border: 1px solid #fde68a; border-radius: 6px;
+    font-size: 12.5px; color: #78350f; line-height: 1.6;
+  }
+  .req-notice strong { color: #92400e; }
+  code {
+    background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 3px;
+    padding: 1px 5px; font-size: 11.5px;
+    font-family: "Consolas", "Menlo", monospace; color: #374151;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+  th { text-align: left; padding: 6px 10px; border: 1px solid #e5e7eb; background: #f7f8fa; }
+  td { padding: 6px 10px; border: 1px solid #e5e7eb; }
+
+  footer {
+    margin-top: 48px; padding-top: 16px; border-top: 1px solid #e5e7eb;
+    text-align: center; font-size: 12px; color: #9ca3af;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Voiceover Generator <span class="badge">AI-Powered</span></h1>
+    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and generate a perfectly synced AI-voiceover video.</p>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps-grid">
+    <div class="step-card">
+      <span class="step-num">1</span><span class="step-title">Upload Screenshots</span>
+      <p class="step-desc">Upload in order. Screenshot #1 is the first uploaded, #2 the second, and so on.</p>
+    </div>
+    <div class="step-card">
+      <span class="step-num">2</span><span class="step-title">Annotate Transcript</span>
+      <p class="step-desc">Add <code>[screenshot:N]</code> markers in your transcript to control exactly when each screenshot appears.</p>
+    </div>
+    <div class="step-card">
+      <span class="step-num">3</span><span class="step-title">Configure Settings</span>
+      <p class="step-desc">Choose TTS language and output filename.</p>
+    </div>
+    <div class="step-card">
+      <span class="step-num">4</span><span class="step-title">Generate &amp; Download</span>
+      <p class="step-desc">Each screenshot stays on screen for exactly as long as its narration takes to speak.</p>
+    </div>
+  </div>
+
+  <!-- Step 1: Screenshots -->
+  <div class="section-label">Step 1 — Upload Screenshots (in order)</div>
+  <div class="upload-zone" id="img-zone">
+    <input type="file" id="img-input" accept="image/*" multiple>
+    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <polyline points="21 15 16 10 5 21"/>
+    </svg>
+    <div class="uz-title">Click to select screenshots, or drag &amp; drop here</div>
+    <div class="uz-hint">PNG, JPG, WEBP · the order you upload is the order used in <code>[screenshot:N]</code></div>
+  </div>
+  <div class="file-list" id="img-list"></div>
+
+  <!-- Step 2: Transcript -->
+  <div class="section-label">Step 2 — Transcript with Screenshot Markers</div>
+
+  <div class="marker-hint">
+    <strong>How to sync screenshots to narration:</strong>
+    Place <code>[screenshot:N]</code> at the point in your transcript where screenshot N should appear.
+    The screenshot stays on screen for exactly as long as the following narration takes to speak.
+    <button class="copy-btn" onclick="copyExample()">Copy example</button>
+    <pre id="example-transcript">[screenshot:1]
+Welcome to the Test Generation demo. In this video we will walk
+through the variable reuse feature step by step.
+
+[screenshot:2]
+First, open the project and navigate to the Test Generation panel
+on the left sidebar.
+
+[screenshot:3]
+Click Generate Tests. The tool analyses your existing variables
+and suggests reuse opportunities automatically.</pre>
+  </div>
+
+  <div class="upload-zone" id="txt-zone"
+       style="padding:14px 16px;text-align:left;display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+    <input type="file" id="txt-input" accept=".md,.txt"
+           style="width:1px;height:1px;opacity:0;position:absolute;">
+    <svg style="width:18px;height:18px;flex-shrink:0;color:#9ca3af;"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+    <span style="font-size:13px;font-weight:600;">Upload a .md or .txt file</span>
+    <label for="txt-input"
+           style="margin-left:auto;padding:5px 12px;background:#fff;border:1px solid #d1d5db;
+                  border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;color:#1f2328;">
+      Browse
+    </label>
+  </div>
+
+  <textarea id="transcript-input"
+    placeholder="Paste your annotated transcript here...
+
+[screenshot:1]
+Your narration for screenshot 1 goes here...
+
+[screenshot:2]
+Your narration for screenshot 2 goes here..."></textarea>
+  <div class="transcript-meta">
+    <span id="seg-count" style="margin-right:12px;color:#3b82d4;font-weight:600;"></span>
+    <span id="char-count">0</span> characters
+  </div>
+
+  <!-- Live segment preview -->
+  <div class="seg-preview" id="seg-preview">
+    <div class="seg-preview-header">Detected segments — each will be one screenshot + its narration audio</div>
+    <div class="seg-list" id="seg-list"></div>
+  </div>
+
+  <!-- Step 3: Settings -->
+  <div class="section-label">Step 3 — Settings</div>
+  <div class="settings-row">
+    <div class="field-group">
+      <label for="tts-lang">TTS Language</label>
+      <select id="tts-lang">
+        <option value="en" selected>English (en)</option>
+        <option value="en-au">English AU</option>
+        <option value="en-gb">English UK</option>
+        <option value="en-us">English US</option>
+        <option value="fr">French (fr)</option>
+        <option value="de">German (de)</option>
+        <option value="es">Spanish (es)</option>
+        <option value="ja">Japanese (ja)</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="output-name">Output Filename</label>
+      <input type="text" id="output-name" value="demo_voiceover.mp4" placeholder="output.mp4">
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="action-row">
+    <button class="btn-generate" id="btn-gen" onclick="startGeneration()">Generate Video</button>
+    <button class="btn-secondary" onclick="resetForm()">Reset</button>
+    <span id="validation-msg" style="font-size:12.5px;color:#ef4444;display:none;"></span>
+  </div>
+
+  <!-- Status -->
+  <div class="status-box" id="status-box">
+    <div class="status-header">
+      <span><span class="status-dot" id="status-dot"></span><span id="status-title">Processing…</span></span>
+      <span id="status-pct" style="font-size:12px;color:#57606a;font-weight:400;">0%</span>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="prog-bar"></div></div>
+    <div class="status-log" id="status-log"></div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-row" id="result-row">
+    <svg class="result-icon" width="28" height="28" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.5">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+    <div class="result-info">
+      <strong id="result-filename">demo_voiceover.mp4</strong>
+      <span id="result-meta">Ready to download</span>
+    </div>
+    <a class="btn-download" id="result-dl" href="#">Download MP4</a>
+  </div>
+
+  <!-- How it works -->
+  <details class="info-block" style="margin-top:28px;">
+    <summary>How it works — processing pipeline</summary>
+    <div class="info-block-body">
+      <p>The backend (<code>generate_voiceover.py --serve</code>) performs these steps for each <code>[screenshot:N]</code> segment:</p>
+      <ul class="pipeline-steps">
+        <li><span class="pipe-num">1</span><span><strong>Parse markers</strong> — Transcript is split at every <code>[screenshot:N]</code> tag into narration segments.</span></li>
+        <li><span class="pipe-num">2</span><span><strong>TTS per segment</strong> — gTTS generates a separate MP3 for each segment's narration text. Duration is measured exactly.</span></li>
+        <li><span class="pipe-num">3</span><span><strong>Video per segment</strong> — FFmpeg loops the referenced screenshot image for exactly that segment's audio duration.</span></li>
+        <li><span class="pipe-num">4</span><span><strong>Concatenate video</strong> — All per-segment video clips are joined in order.</span></li>
+        <li><span class="pipe-num">5</span><span><strong>Concatenate audio</strong> — All per-segment MP3s are joined in order.</span></li>
+        <li><span class="pipe-num">6</span><span><strong>Mux</strong> — Combined silent video + combined audio are merged into the final MP4 (<code>-c:a aac</code>).</span></li>
+      </ul>
+      <p style="margin-top:10px;font-size:12.5px;color:#57606a;">
+        Result: each screenshot is visible for <em>exactly</em> as long as its narration takes to speak — no manual timing needed.
+      </p>
+    </div>
+  </details>
+
+  <details class="info-block">
+    <summary>Marker rules &amp; tips</summary>
+    <div class="info-block-body">
+      <table>
+        <thead><tr><th>Rule</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>Syntax</td><td><code>[screenshot:N]</code> where N is 1-based (matches upload order)</td></tr>
+          <tr><td>Placement</td><td>Start of a paragraph, inline mid-sentence, or on its own line</td></tr>
+          <tr><td>Reuse</td><td>Reference the same screenshot multiple times — it stays on screen for the combined duration</td></tr>
+          <tr><td>No markers</td><td>If there are no markers, all text is narrated over screenshot 1</td></tr>
+          <tr><td>Missing image</td><td>If you reference <code>[screenshot:5]</code> but only uploaded 3 images, generation will fail with a clear error</td></tr>
+          <tr><td>Other brackets</td><td><code>[pause]</code>, <code>[note: ...]</code> etc. are stripped from audio but do not affect screenshot switching</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+  <!-- Requirements -->
+  <div class="req-notice">
+    <strong>Requirements:</strong> Start the Python backend before clicking Generate.<br>
+    Install: <code>pip install flask flask-cors gtts pydub</code> &nbsp;|&nbsp; System: <code>ffmpeg</code> on PATH<br>
+    Start: <code>python generate_voiceover.py --serve</code>
+  </div>
+
+  <!-- Backend connection -->
+  <div style="margin-top:14px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#57606a;">
+    <span id="conn-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fbbf24;"></span>
+    <span id="conn-label">Checking backend connection…</span>
+  </div>
+
+</div>
+
+<footer>Made with IBM Bob</footer>
+
+<script>
+  /* ── Marker regex (mirrors Python) ── */
+  const MARKER_RE = /\[screenshot\s*:\s*(\d+)\]/gi;
+
+  /* ── File state ── */
+  const imgFiles = [];
+
+  /* ── Drag highlight ── */
+  ['img-zone','txt-zone'].forEach(id => {
+    const z = document.getElementById(id);
+    z.addEventListener('dragover',  e => { e.preventDefault(); z.classList.add('drag-over'); });
+    z.addEventListener('dragleave', ()  => z.classList.remove('drag-over'));
+    z.addEventListener('drop',      e => { e.preventDefault(); z.classList.remove('drag-over'); });
+  });
+
+  /* ── Screenshot upload ── */
+  document.getElementById('img-input').addEventListener('change', function () {
+    Array.from(this.files).forEach(f => imgFiles.push(f));
+    renderImgList();
+    this.value = '';
+  });
+
+  function renderImgList() {
+    const list = document.getElementById('img-list');
+    list.innerHTML = '';
+    imgFiles.forEach((f, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'file-chip';
+      chip.innerHTML =
+        `<span class="idx-label">#${i + 1}</span>` +
+        `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+           <rect x="3" y="3" width="18" height="18" rx="2"/>
+           <circle cx="8.5" cy="8.5" r="1.5"/>
+           <polyline points="21 15 16 10 5 21"/>
+         </svg>${f.name}<button class="remove" onclick="removeImg(${i})">×</button>`;
+      list.appendChild(chip);
+    });
+    updateSegmentPreview();
+  }
+  function removeImg(i) { imgFiles.splice(i, 1); renderImgList(); }
+
+  /* ── Transcript file upload ── */
+  document.getElementById('txt-input').addEventListener('change', function () {
+    if (!this.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('transcript-input').value = e.target.result;
+      onTranscriptChange();
+    };
+    reader.readAsText(this.files[0]);
+    this.value = '';
+  });
+
+  /* ── Live transcript parsing ── */
+  document.getElementById('transcript-input').addEventListener('input', onTranscriptChange);
+
+  function onTranscriptChange() {
+    const text = document.getElementById('transcript-input').value;
+    document.getElementById('char-count').textContent = text.length.toLocaleString();
+    updateSegmentPreview();
+  }
+
+  function parseSegments(text) {
+    const re    = /\[screenshot\s*:\s*(\d+)\]/gi;
+    const parts = text.split(re);
+    const segs  = [];
+    if (parts.length === 1) {
+      const t = cleanPreview(parts[0]);
+      if (t) segs.push({ index: 1, text: t });
+      return segs;
+    }
+    let leading = cleanPreview(parts[0]);
+    for (let i = 1; i < parts.length - 1; i += 2) {
+      const idx  = parseInt(parts[i]);
+      let   txt  = cleanPreview(parts[i + 1]);
+      if (i === 1 && leading) { txt = leading + ' ' + txt; leading = ''; }
+      if (txt) segs.push({ index: idx, text: txt });
+    }
+    return segs;
+  }
+
+  function cleanPreview(s) {
+    return s.replace(/\[screenshot\s*:\s*\d+\]/gi, '')
+            .replace(/#+\s.*\n/g, '')
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g,     '$1')
+            .replace(/\[[^\]]*\]/g,    '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+  }
+
+  function updateSegmentPreview() {
+    const text    = document.getElementById('transcript-input').value;
+    const segs    = parseSegments(text);
+    const preview = document.getElementById('seg-preview');
+    const list    = document.getElementById('seg-list');
+    const countEl = document.getElementById('seg-count');
+
+    if (segs.length === 0) {
+      preview.classList.remove('visible');
+      countEl.textContent = '';
+      return;
+    }
+
+    countEl.textContent = segs.length + ' segment' + (segs.length > 1 ? 's' : '') + ' detected';
+    list.innerHTML = '';
+
+    segs.forEach(s => {
+      const missing = s.index > imgFiles.length;
+      const row     = document.createElement('div');
+      row.className = 'seg-row';
+      row.innerHTML =
+        `<span class="seg-badge${missing ? ' missing' : ''}">[screenshot:${s.index}]</span>` +
+        `<span class="seg-text">${s.text.substring(0, 90)}${s.text.length > 90 ? '…' : ''}</span>` +
+        (missing
+          ? `<span style="font-size:11px;color:#ef4444;flex-shrink:0;">⚠ image #${s.index} not uploaded</span>`
+          : `<span style="font-size:11px;color:#57606a;flex-shrink:0;">${imgFiles[s.index-1] ? imgFiles[s.index-1].name : ''}</span>`);
+      list.appendChild(row);
+    });
+
+    preview.classList.add('visible');
+  }
+
+  /* ── Copy example ── */
+  function copyExample() {
+    const text = document.getElementById('example-transcript').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      document.getElementById('transcript-input').value = text;
+      onTranscriptChange();
+    });
+  }
+
+  /* ── Reset ── */
+  function resetForm() {
+    imgFiles.length = 0;
+    renderImgList();
+    document.getElementById('transcript-input').value = '';
+    document.getElementById('char-count').textContent = '0';
+    document.getElementById('seg-count').textContent  = '';
+    document.getElementById('seg-preview').classList.remove('visible');
+    document.getElementById('tts-lang').value    = 'en';
+    document.getElementById('output-name').value = 'demo_voiceover.mp4';
+    document.getElementById('status-box').classList.remove('visible');
+    document.getElementById('result-row').classList.remove('visible');
+    document.getElementById('validation-msg').style.display = 'none';
+  }
+
+  /* ── Log helpers ── */
+  function log(msg, cls) {
+    const el   = document.getElementById('status-log');
+    const line = document.createElement('div');
+    line.className = cls || '';
+    line.textContent = msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+  function setProgress(pct) {
+    document.getElementById('prog-bar').style.width   = pct + '%';
+    document.getElementById('status-pct').textContent = pct + '%';
+  }
+
+  /* ── Validation ── */
+  function validate() {
+    const vm   = document.getElementById('validation-msg');
+    const text = document.getElementById('transcript-input').value.trim();
+    if (imgFiles.length === 0) {
+      vm.textContent = 'Please upload at least one screenshot.'; vm.style.display = 'inline'; return false;
+    }
+    if (!text) {
+      vm.textContent = 'Please paste or upload a transcript.'; vm.style.display = 'inline'; return false;
+    }
+    // Check all referenced indices are uploaded
+    const segs    = parseSegments(text);
+    const missing = segs.filter(s => s.index > imgFiles.length);
+    if (missing.length > 0) {
+      const idxs = [...new Set(missing.map(s => s.index))].join(', ');
+      vm.textContent = `Screenshot(s) ${idxs} referenced in transcript but not uploaded.`;
+      vm.style.display = 'inline'; return false;
+    }
+    vm.style.display = 'none';
+    return true;
+  }
+
+  /* ── Generate ── */
+  async function startGeneration() {
+    if (!validate()) return;
+
+    const btn         = document.getElementById('btn-gen');
+    const statusBox   = document.getElementById('status-box');
+    const statusDot   = document.getElementById('status-dot');
+    const statusTitle = document.getElementById('status-title');
+    const resultRow   = document.getElementById('result-row');
+    const segs        = parseSegments(document.getElementById('transcript-input').value);
+
+    btn.disabled = true;
+    resultRow.classList.remove('visible');
+    document.getElementById('status-log').innerHTML = '';
+    statusBox.classList.add('visible');
+    statusDot.className      = 'status-dot running';
+    statusTitle.textContent  = 'Processing…';
+    setProgress(0);
+
+    const outputName = document.getElementById('output-name').value.trim() || 'demo_voiceover.mp4';
+    const lang       = document.getElementById('tts-lang').value;
+    const transcript = document.getElementById('transcript-input').value;
+
+    log(`[Step 1] Sending ${imgFiles.length} screenshot(s), ${segs.length} segment(s)…`, 'log-step');
+    setProgress(8);
+
+    const fd = new FormData();
+    fd.append('transcript',  transcript);
+    fd.append('lang',        lang);
+    fd.append('output_name', outputName);
+    imgFiles.forEach(f => fd.append('screenshots', f, f.name));
+
+    let response;
+    try {
+      response = await fetch('http://localhost:5050/generate', { method: 'POST', body: fd });
+    } catch (err) {
+      statusDot.className     = 'status-dot error';
+      statusTitle.textContent = 'Backend unreachable';
+      log('ERROR: Could not connect to backend at http://localhost:5050', 'log-err');
+      log('Start it with: python generate_voiceover.py --serve', 'log-warn');
+      btn.disabled = false;
+      return;
+    }
+
+    if (!response.ok) {
+      let errMsg = response.statusText;
+      try { const j = await response.json(); errMsg = j.error || errMsg; } catch (_) {}
+      statusDot.className     = 'status-dot error';
+      statusTitle.textContent = 'Generation failed';
+      log('ERROR: ' + errMsg, 'log-err');
+      btn.disabled = false;
+      return;
+    }
+
+    /* Simulate per-segment progress while blob downloads */
+    const perStep = 80 / segs.length;
+    for (let i = 0; i < segs.length; i++) {
+      log(`[Step ${i + 2}] Generating TTS + video for [screenshot:${segs[i].index}]…`, 'log-step');
+      setProgress(Math.round(10 + perStep * (i + 1)));
+      await sleep(150);
+    }
+    log('[Final] Concatenating segments and muxing audio…', 'log-step');
+    setProgress(95);
+    await sleep(200);
+
+    const blob = await response.blob();
+    const url  = URL.createObjectURL(blob);
+    setProgress(100);
+    statusDot.className     = 'status-dot done';
+    statusTitle.textContent = 'Complete';
+    log('Done! ' + outputName, 'log-ok');
+
+    document.getElementById('result-filename').textContent = outputName;
+    document.getElementById('result-meta').textContent =
+      `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · lang: ${lang}`;
+    const dlLink   = document.getElementById('result-dl');
+    dlLink.href     = url;
+    dlLink.download = outputName;
+    resultRow.classList.add('visible');
+    btn.disabled = false;
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  /* ── Backend health check ── */
+  async function checkBackend() {
+    const dot   = document.getElementById('conn-dot');
+    const label = document.getElementById('conn-label');
+    try {
+      const r = await fetch('http://localhost:5050/health',
+                            { signal: AbortSignal.timeout(2500) });
+      if (r.ok) {
+        dot.style.background = '#22c55e';
+        label.textContent    = 'Backend connected — localhost:5050';
+      } else { throw new Error(); }
+    } catch {
+      dot.style.background = '#ef4444';
+      label.textContent    = 'Backend not running — start with: python generate_voiceover.py --serve';
+    }
+  }
+  checkBackend();
+  setInterval(checkBackend, 15000);
+</script>
+</body>
+</html>

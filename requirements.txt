@@ -1,0 +1,5 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+gtts>=2.5.0
+mutagen>=1.47.0
+moviepy>=1.0.3
