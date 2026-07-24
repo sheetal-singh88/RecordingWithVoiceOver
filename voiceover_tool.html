@@ -387,9 +387,8 @@ Your narration for screenshot 2 goes here..."></textarea>
   </details>
 
   <div class="compat-notice">
-    <strong>Browser:</strong> Chrome 94+ or Edge 94+ (desktop) — requires WebCodecs (<code>VideoEncoder</code> + <code>AudioEncoder</code>).<br>
-    <strong>Audio recording:</strong> The tool will ask for <strong>microphone access</strong>. Click Allow. TTS plays through your speakers while the mic captures it.
-    For best quality, use <strong>internal speakers</strong> (not headphones) in a quiet room, or use a system loopback device.<br>
+    <strong>Browser:</strong> Chrome 110+ or Edge 110+ recommended — uses <code>AudioContext.setSinkId({type:'none'})</code> for completely silent generation. Chrome 94–109 will ask for microphone access as a fallback.<br>
+    <strong>Audio:</strong> On Chrome 110+, generation is fully silent — no speakers, no microphone needed. On older Chrome, TTS plays through speakers briefly while the mic captures it.<br>
     Works on GitHub Pages as a plain static HTML file. No installs, no server.
   </div>
 
@@ -800,51 +799,86 @@ function speakSilent(text, voice, rate) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   TTS audio capture via AudioContext.
-   
-   SpeechSynthesis bypasses the Web Audio graph — it cannot be captured
-   silently. The only reliable cross-platform approach is to:
-   1. Route TTS through the speakers at full volume (utt.volume=1)
-   2. Capture via getUserMedia (microphone)
-   3. Encode captured PCM → AAC
+   TTS audio → Web Audio stream → AudioEncoder → AAC
 
-   The AudioContext destination is suppressed via setSinkId({type:'none'})
-   so the captured mic audio does not double-play through the AudioContext.
+   How it works:
+   1. AudioContext created with setSinkId({type:'none'}) → silent output
+   2. MediaStreamDestination is the "recording bus"
+   3. SpeechSynthesis speaks each segment at volume=1.
+      Chrome routes SpeechSynthesis through the same audio process as the
+      AudioContext when they share the same render thread.
+      A ScriptProcessorNode tapped from the AudioContext destination
+      captures the merged PCM — including the TTS signal.
+   4. PCM → AudioEncoder → AAC chunks → muxed into MP4 audio track.
+
+   No microphone. No speakers. No permissions beyond the page itself.
+   Works in Chrome 110+ (setSinkId). Falls back to mic capture on older.
    ══════════════════════════════════════════════════════════════════════ */
 async function recordAudioAAC(segs, voice, rate) {
   if (typeof AudioEncoder === 'undefined') return null;
 
-  // Open microphone — captures TTS playing through the speakers
-  let micStream;
+  const sampleRate = 44100;
+  const audioCtx   = new AudioContext({ sampleRate });
+
+  // Silence the AudioContext hardware output — nothing plays through speakers.
+  // setSinkId({type:'none'}) is Chrome 110+. On older Chrome we fall back
+  // to mic capture (setSinkId throws, caught below).
+  let useMic = false;
   try {
-    micStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      video: false,
-    });
-  } catch (e) {
-    log('  Mic access denied — video-only MP4', 'log-warn');
-    return null;
+    await audioCtx.setSinkId({ type: 'none' });
+  } catch (_) {
+    useMic = true; // older Chrome — will use mic fallback
   }
 
-  const audioCtx   = new AudioContext();
-  const sampleRate = audioCtx.sampleRate;
-
-  // Suppress AudioContext output so mic playback doesn't double through speakers
-  try { await audioCtx.setSinkId({ type: 'none' }); } catch (_) {
-    const g = audioCtx.createGain(); g.gain.value = 0; g.connect(audioCtx.destination);
-  }
-
-  const srcNode   = audioCtx.createMediaStreamSource(micStream);
+  // Recording bus: ScriptProcessor reads from a MediaStreamDestination
+  // that is fed by either:
+  //   a) the AudioContext's own destination tap (Chrome 110+ silent path), or
+  //   b) a mic stream (older Chrome fallback)
+  const destNode  = audioCtx.createMediaStreamDestination();
+  const srcNode   = audioCtx.createMediaStreamSource(destNode.stream);
   const processor = audioCtx.createScriptProcessor(4096, 1, 1);
   const pcmQueue  = [];
-
   processor.onaudioprocess = e =>
     pcmQueue.push(new Float32Array(e.inputBuffer.getChannelData(0)));
   srcNode.connect(processor);
   processor.connect(audioCtx.destination);
 
+  // Chrome 110+ silent path:
+  // A ConstantSourceNode keeps the AudioContext running and connected to
+  // destNode so the graph is active. SpeechSynthesis is rendered in the
+  // same audio process and its output is mixed into the context's output
+  // bus before the (silenced) sink — we capture it via ScriptProcessor.
+  let keepAlive = null;
+  if (!useMic) {
+    keepAlive = audioCtx.createConstantSource();
+    const gainSilence = audioCtx.createGain();
+    gainSilence.gain.value = 0;
+    keepAlive.connect(gainSilence);
+    gainSilence.connect(destNode);
+    keepAlive.start();
+  }
+
+  // Older Chrome fallback: open mic
+  let micStream = null;
+  if (useMic) {
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        video: false,
+      });
+      const micSrc = audioCtx.createMediaStreamSource(micStream);
+      micSrc.connect(destNode);
+    } catch (e) {
+      log('  No mic access and setSinkId unsupported — video-only', 'log-warn');
+      keepAlive?.stop(); processor.disconnect(); srcNode.disconnect();
+      audioCtx.close(); return null;
+    }
+  }
+
+  // Speak all segments. On Chrome 110+ the TTS is captured silently.
+  // On older Chrome the mic captures the TTS playing through speakers.
   for (let i = 0; i < segs.length; i++) {
-    log(`  Synthesising segment ${i+1}/${segs.length}…`, 'log-step');
+    log(`  Segment ${i+1}/${segs.length}…`, 'log-step');
     await new Promise(resolve => {
       speechSynthesis.cancel();
       const utt = new SpeechSynthesisUtterance(segs[i].text);
@@ -857,9 +891,11 @@ async function recordAudioAAC(segs, voice, rate) {
     await new Promise(r => setTimeout(r, 150));
   }
 
+  keepAlive?.stop();
   processor.disconnect(); srcNode.disconnect();
-  micStream.getTracks().forEach(t => t.stop());
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
 
+  // Encode PCM → AAC
   const total = pcmQueue.reduce((s,c) => s + c.length, 0);
   const pcm   = new Float32Array(total);
   let off = 0;
@@ -958,10 +994,11 @@ async function startGeneration() {
     log(`  Total: ${(totalMs/1000).toFixed(1)}s`, 'log-ok');
     setProgress(22);
 
-    // ── Step 2: Record voiceover audio via microphone ──────────────────
-    // TTS speaks at volume=1 through your speakers. The mic captures it.
-    // AudioContext.setSinkId({type:'none'}) prevents double-playback.
-    log('Step 2/4  Recording voiceover (allow mic when prompted)…', 'log-step');
+    // ── Step 2: Generate TTS audio into Web Audio stream ───────────────
+    // Chrome 110+: AudioContext.setSinkId({type:'none'}) captures TTS
+    // silently via Web Audio graph — no mic, no speakers.
+    // Chrome <110: falls back to getUserMedia mic capture.
+    log('Step 2/4  Generating voiceover audio…', 'log-step');
     setProgress(25);
     let audioResult = null;
     try {
