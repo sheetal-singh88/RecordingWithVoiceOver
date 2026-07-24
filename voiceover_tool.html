@@ -907,19 +907,16 @@ function speakSilent(text, voice, rate) {
    encoder   : active VideoEncoder instance
    Returns   : new running timestamp after this segment
    ══════════════════════════════════ */
-async function encodeSegment(bitmap, durationMs, startUs, encoder) {
+function encodeSegmentSync(bitmap, durationMs, startUs, encoder) {
+  // Synchronous — no awaits, no yields.
+  // VideoEncoder.encode() is non-blocking by design; it queues frames
+  // internally. We just submit all frames and return the next timestamp.
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
   const frameCount = Math.max(1, Math.round(durationMs / 1000 * FPS));
   const frameDurUs = Math.round(durationMs * 1000 / frameCount);
 
   for (let f = 0; f < frameCount; f++) {
-    // Back-pressure: wait if the encoder queue is getting full
-    // This replaces setTimeout yields (which caused "closed codec" errors)
-    while (encoder.encodeQueueSize > 5) {
-      await new Promise(r => requestAnimationFrame(r));
-    }
-
     const frame = new VideoFrame(canvas, {
       timestamp: startUs + f * frameDurUs,
       duration:  frameDurUs,
@@ -927,9 +924,6 @@ async function encodeSegment(bitmap, durationMs, startUs, encoder) {
     encoder.encode(frame, { keyFrame: f === 0 });
     frame.close();
   }
-
-  // Flush after every segment so all frames are processed before moving on
-  await encoder.flush();
 
   return startUs + frameCount * frameDurUs;
 }
@@ -1023,22 +1017,21 @@ async function startGeneration() {
     log('VideoEncoder ready — encoding frames…', 'log-ok');
     setProgress(40);
 
-    // ── Step 3: Encode video frames for each segment ────────────────────
+    // ── Step 3: Submit ALL frames synchronously, then flush once ────────
+    // All encode() calls are non-blocking — they queue internally.
+    // A single flush() at the end drains the queue.
+    // No awaits between configure() and flush() = encoder never goes idle.
     let timestampUs = 0;
-    const perSeg = 50 / segs.length;
-
     for (let i = 0; i < segs.length; i++) {
-      if (encodeError) throw encodeError;
       const seg    = segs[i];
       const bitmap = imgBitmaps[seg.index - 1];
-      log(`  [${i + 1}/${segs.length}] [screenshot:${seg.index}] — ${Math.round(durations[i]/1000 * FPS)} frames`, 'log-step');
-      timestampUs = await encodeSegment(bitmap, durations[i], timestampUs, encoder);
-      if (encodeError) throw encodeError;
-      setProgress(40 + perSeg * (i + 1));
+      const nFrames = Math.max(1, Math.round(durations[i] / 1000 * FPS));
+      log(`  [${i + 1}/${segs.length}] [screenshot:${seg.index}] — ${nFrames} frames queued`, 'log-step');
+      timestampUs = encodeSegmentSync(bitmap, durations[i], timestampUs, encoder);
     }
 
-    // ── Step 4: Flush and close encoder ────────────────────────────────
-    log('Flushing encoder…', 'log-step');
+    // ── Step 4: Single flush + close ───────────────────────────────────
+    log('Flushing encoder (this may take a moment)…', 'log-step');
     setProgress(92);
     await encoder.flush();
     if (encodeError) throw encodeError;
