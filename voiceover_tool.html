@@ -1128,10 +1128,12 @@ async function startGeneration() {
     });
 
     await encoder.configure({
-      codec:       'avc1.42001f',
+      // avc1.4d0034 = H.264 Main Profile Level 5.2 — supports up to ~8.9M pixels (4K+)
+      // Previous avc1.42001f (Baseline 3.1) was limited to 921,600 pixels (~1280×720)
+      codec:       'avc1.4d0034',
       width:       canvas.width,
       height:      canvas.height,
-      bitrate:     4_000_000,
+      bitrate:     6_000_000,  // bumped for higher-res content
       framerate:   FPS,
       latencyMode: 'realtime',
     });
