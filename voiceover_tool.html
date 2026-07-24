@@ -981,78 +981,98 @@ function speakSilent(text, voice, rate) {
 }
 
 /* ══════════════════════════════════
-   Capture tab audio via getDisplayMedia (Chrome 109+ preferCurrentTab)
-   Returns: MediaStream or null if not supported/denied
+   Capture tab audio stream via getDisplayMedia.
+   Must be called as the very first await in the button-click handler
+   to stay within Chrome's user-gesture window.
+   Returns MediaStream or null.
    ══════════════════════════════════ */
-async function startTabCapture() {
+async function tryStartTabCapture() {
+  if (!navigator.mediaDevices?.getDisplayMedia) return null;
   try {
-    // preferCurrentTab: Chrome 109+ auto-selects this tab, no system dialog
-    const stream = await navigator.mediaDevices.getDisplayMedia({
+    return await navigator.mediaDevices.getDisplayMedia({
       video: false,
       audio: true,
-      preferCurrentTab: true,
+      preferCurrentTab: true,   // Chrome 109+ — auto-selects this tab, no dialog
+      selfBrowserSurface: 'include',
     });
-    return stream;
   } catch (e) {
-    return null; // user denied, or browser doesn't support — audio step will be skipped
+    return null;
   }
 }
 
 /* ══════════════════════════════════
-   Speak one segment aloud and return PCM samples from the capture stream.
-   captureStream: MediaStream from getDisplayMedia (tab audio)
-   audioCtx:      shared AudioContext
-   Returns: Float32Array of mono PCM at audioCtx.sampleRate
+   Record all TTS segments using a MediaStream capture.
+   captureStream: from tryStartTabCapture() — real tab audio capture
+   Returns: Blob (WebM/Ogg audio) or null
    ══════════════════════════════════ */
-function recordSegment(text, voice, rate, audioCtx, captureStream) {
-  return new Promise((resolve, reject) => {
+async function recordAllAudio(segs, voice, rate, captureStream) {
+  if (!captureStream) return null;
+
+  // Pick best supported MIME type
+  const mimeType = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+  ].find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+  let mediaRec;
+  try {
+    mediaRec = new MediaRecorder(captureStream, mimeType ? { mimeType } : {});
+  } catch (e) { return null; }
+
+  const chunks = [];
+  mediaRec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  mediaRec.start(100);
+
+  for (let i = 0; i < segs.length; i++) {
+    await speakAudible(segs[i].text, voice, rate);
+    await new Promise(r => setTimeout(r, 150)); // brief gap between segments
+  }
+
+  mediaRec.stop();
+  await new Promise(r => { mediaRec.onstop = r; });
+
+  captureStream.getTracks().forEach(t => t.stop());
+  return chunks.length > 0 ? new Blob(chunks, { type: mediaRec.mimeType || 'audio/webm' }) : null;
+}
+
+/* ══════════════════════════════════
+   Speak one segment aloud (volume=1). Resolves when done.
+   ══════════════════════════════════ */
+function speakAudible(text, voice, rate) {
+  return new Promise((resolve) => {
     speechSynthesis.cancel();
-
-    const collected = [];
-    const bufSize   = 4096;
-
-    // Tap the tab capture stream with a ScriptProcessorNode
-    const srcNode   = audioCtx.createMediaStreamSource(captureStream);
-    const processor = audioCtx.createScriptProcessor(bufSize, 2, 1); // stereo-in, mono-out
-    processor.onaudioprocess = (e) => {
-      // Mix stereo → mono
-      const L = e.inputBuffer.getChannelData(0);
-      const R = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : L;
-      const mono = new Float32Array(L.length);
-      for (let i = 0; i < L.length; i++) mono[i] = (L[i] + R[i]) * 0.5;
-      collected.push(mono);
-    };
-    srcNode.connect(processor);
-    processor.connect(audioCtx.destination); // must be connected to run
-
-    const utt = new SpeechSynthesisUtterance(text);
+    const utt   = new SpeechSynthesisUtterance(text);
     if (voice) utt.voice = voice;
-    utt.rate  = rate;
-    utt.pitch = 1;
-    utt.volume = 1; // audible — captured by getDisplayMedia tab audio
-
-    utt.onend = () => {
-      // Small tail to capture the last buffer
-      setTimeout(() => {
-        processor.disconnect();
-        srcNode.disconnect();
-        speechSynthesis.cancel();
-
-        const total  = collected.reduce((s, c) => s + c.length, 0);
-        const merged = new Float32Array(total);
-        let   off    = 0;
-        for (const chunk of collected) { merged.set(chunk, off); off += chunk.length; }
-        resolve(merged);
-      }, 200);
-    };
-    utt.onerror = e => {
-      processor.disconnect();
-      srcNode.disconnect();
-      reject(new Error('Speech record error: ' + (e.error || e)));
-    };
-
+    utt.rate    = rate;
+    utt.pitch   = 1;
+    utt.volume  = 1;
+    utt.onend   = () => setTimeout(resolve, 80);
+    utt.onerror = () => resolve();
     speechSynthesis.speak(utt);
   });
+}
+
+/* ══════════════════════════════════
+   Build an SRT subtitle file from segments + durations.
+   Returns a string.
+   ══════════════════════════════════ */
+function buildSrt(segs, durations) {
+  function fmt(ms) {
+    const h   = Math.floor(ms / 3600000);
+    const m   = Math.floor((ms % 3600000) / 60000);
+    const s   = Math.floor((ms % 60000) / 1000);
+    const ms3 = Math.floor(ms % 1000);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms3).padStart(3,'0')}`;
+  }
+  let out = '', t = 0;
+  segs.forEach((seg, i) => {
+    const dur = durations[i];
+    out += `${i+1}\n${fmt(t)} --> ${fmt(t + dur)}\n${seg.text}\n\n`;
+    t += dur;
+  });
+  return out;
 }
 
 /* ══════════════════════════════════
@@ -1112,6 +1132,14 @@ async function startGeneration() {
   const voice = isNaN(voiceIdx) ? null : (sorted[voiceIdx] || null);
 
   try {
+    // ── FIRST: request tab audio capture while still in the user-gesture window ──
+    // getDisplayMedia must be called before any await to satisfy Chrome's
+    // user-gesture requirement. We'll use the stream later in Step 2.
+    const captureStream = await tryStartTabCapture();
+    if (captureStream) {
+      log('Audio capture ready (tab audio)…', 'log-ok');
+    }
+
     // ── Canvas size from first screenshot ──────────────────────────────
     const firstBm = imgBitmaps[segs[0].index - 1];
     canvas.width  = firstBm.width  % 2 === 0 ? firstBm.width  : firstBm.width  - 1;
@@ -1131,52 +1159,36 @@ async function startGeneration() {
     log(`  Total: ${(totalMs / 1000).toFixed(1)}s`, 'log-ok');
     setProgress(25);
 
-    // ── Step 2: Record audio for each segment ──────────────────────────
-    // SpeechSynthesis speaks aloud at volume=1 while we capture the tab's
-    // audio output via getDisplayMedia(preferCurrentTab:true) — Chrome 109+.
-    // Falls back gracefully to video-only if capture is unavailable/denied.
-    log('Step 2/4  Starting audio capture (tab audio)…', 'log-step');
+    // ── Step 2: Record audio ───────────────────────────────────────────
+    // Speak all segments aloud and capture via getDisplayMedia tab stream.
+    // Falls back to SRT subtitles if tab capture unavailable.
+    log('Step 2/4  Recording voiceover audio…', 'log-step');
     setProgress(28);
 
-    let wavBlob  = null;
-    let audioCtx = null;
-    let captureStream = null;
+    let audioBlob = null;
+    let srtText   = null;
     try {
-      captureStream = await startTabCapture();
-      if (!captureStream) {
-        log('  Audio capture unavailable — generating video-only MP4', 'log-warn');
+      audioBlob = await recordAllAudio(segs, voice, rate, captureStream);
+      if (audioBlob) {
+        log(`  Recorded: ${(audioBlob.size / 1024).toFixed(0)} KB  (${audioBlob.type})`, 'log-ok');
       } else {
-        audioCtx = new AudioContext();
-        const allPcm = [];
+        log('  Audio capture unavailable — SRT subtitles will be generated instead', 'log-warn');
+        // Still speak aloud so the user hears the narration
         for (let i = 0; i < segs.length; i++) {
-          log(`  Recording segment ${i + 1}/${segs.length}…`, 'log-step');
-          const pcm = await recordSegment(segs[i].text, voice, rate, audioCtx, captureStream);
-          allPcm.push(pcm);
-          await new Promise(r => setTimeout(r, 100)); // brief gap between segments
+          log(`  Speaking segment ${i + 1}/${segs.length}…`, 'log-step');
+          await speakAudible(segs[i].text, voice, rate);
         }
-
-        // Concatenate all PCM chunks into one WAV
-        const totalSamples = allPcm.reduce((s, c) => s + c.length, 0);
-        const merged = new Float32Array(totalSamples);
-        let   off    = 0;
-        for (const chunk of allPcm) { merged.set(chunk, off); off += chunk.length; }
-
-        const wavBytes = buildWav(merged, audioCtx.sampleRate);
-        wavBlob = new Blob([wavBytes], { type: 'audio/wav' });
-        log(`  Audio recorded: ${(wavBlob.size / 1024).toFixed(0)} KB  |  ${audioCtx.sampleRate} Hz`, 'log-ok');
+        srtText = buildSrt(segs, durations);
       }
     } catch (audioErr) {
-      log(`  Audio capture failed (${audioErr.message}) — generating video-only MP4`, 'log-warn');
-    } finally {
-      if (captureStream) captureStream.getTracks().forEach(t => t.stop());
-      if (audioCtx) audioCtx.close().catch(() => {});
+      log(`  Audio step failed (${audioErr.message})`, 'log-warn');
     }
     setProgress(50);
 
     // ── Step 3: Create VideoEncoder and encode all frames ──────────────
     // IMPORTANT: create the encoder HERE — right before encoding.
-    // Chrome silently closes a VideoEncoder that sits idle for > ~1s.
-    // Never put any awaits between configure() and the first encode().
+    // Chrome closes an idle VideoEncoder after ~1 s — no awaits between
+    // configure() and the first encode() call.
     log('Step 3/4  Encoding video frames (H.264)…', 'log-step');
 
     const encodedChunks = [];
@@ -1254,17 +1266,31 @@ async function startGeneration() {
     dlLink.download = baseName + '.mp4';
     resultRow.classList.add('visible');
 
-    // Show WAV download if audio was captured
-    if (wavBlob) {
-      const wavUrl = URL.createObjectURL(wavBlob);
-      document.getElementById('result-audio-filename').textContent = baseName + '.wav';
+    // Show audio/SRT download
+    if (audioBlob) {
+      const ext    = audioBlob.type.includes('ogg') ? 'ogg' : 'webm';
+      const audUrl = URL.createObjectURL(audioBlob);
+      document.getElementById('result-audio-filename').textContent = `${baseName}_audio.${ext}`;
       document.getElementById('result-audio-meta').textContent =
-        `Voiceover audio · ${(wavBlob.size / 1024).toFixed(0)} KB — combine with the MP4 in any video editor (e.g. Clipchamp, DaVinci Resolve)`;
+        `Voiceover audio · ${(audioBlob.size / 1024).toFixed(0)} KB · ${audioBlob.type} — combine with the MP4 in any video editor`;
       const dlAudio    = document.getElementById('result-dl-audio');
-      dlAudio.href     = wavUrl;
-      dlAudio.download = baseName + '.wav';
+      dlAudio.href     = audUrl;
+      dlAudio.download = `${baseName}_audio.${ext}`;
+      document.getElementById('result-dl-audio').textContent = `Download ${ext.toUpperCase()}`;
       resultRowAudio.classList.add('visible');
-      log(`Audio: ${baseName}.wav  (${(wavBlob.size/1024).toFixed(0)} KB)`, 'log-ok');
+      log(`Audio: ${baseName}_audio.${ext}  (${(audioBlob.size/1024).toFixed(0)} KB)`, 'log-ok');
+    } else if (srtText) {
+      const srtBlob = new Blob([srtText], { type: 'text/plain' });
+      const srtUrl  = URL.createObjectURL(srtBlob);
+      document.getElementById('result-audio-filename').textContent = `${baseName}.srt`;
+      document.getElementById('result-audio-meta').textContent =
+        `SRT subtitles with exact timing — drag onto the MP4 in VLC, Clipchamp, or any video editor`;
+      const dlAudio    = document.getElementById('result-dl-audio');
+      dlAudio.href     = srtUrl;
+      dlAudio.download = `${baseName}.srt`;
+      document.getElementById('result-dl-audio').textContent = 'Download SRT';
+      resultRowAudio.classList.add('visible');
+      log(`Subtitles: ${baseName}.srt`, 'log-ok');
     }
 
   } catch (err) {
