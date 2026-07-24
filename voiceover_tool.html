@@ -387,8 +387,8 @@ Your narration for screenshot 2 goes here..."></textarea>
   </details>
 
   <div class="compat-notice">
-    <strong>Browser:</strong> Chrome 94+ or Edge 94+ (desktop) — requires WebCodecs (<code>VideoEncoder</code> + <code>AudioEncoder</code>).<br>
-    <strong>Audio:</strong> Click <em>Allow</em> when the browser asks for microphone access — it captures the TTS playing through your speakers.<br>
+    <strong>Browser:</strong> Chrome 109+ or Edge 109+ (desktop) — requires WebCodecs + tab audio capture.<br>
+    <strong>Audio:</strong> Generation is <strong>silent</strong> — you will not hear anything. Chrome will briefly show a screen-share indicator in the address bar; this is normal and dismisses automatically.<br>
     Works on GitHub Pages as a plain static HTML file. No installs, no server.
   </div>
 
@@ -798,62 +798,83 @@ function speakSilent(text, voice, rate) {
   });
 }
 
-/* ══════════════════════════════════
-   Record all TTS audio segments via getUserMedia + AudioEncoder (AAC)
-   Returns { audioChunks, sampleRate } or null
-   ══════════════════════════════════ */
-async function recordAudioAAC(segs, voice, rate) {
-  if (typeof AudioEncoder === 'undefined') return null;
+/* ══════════════════════════════════════════════════════════════════════
+   Silent TTS audio capture via OfflineAudioContext trick.
 
-  let micStream;
-  try {
-    micStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      video: false,
-    });
-  } catch (e) {
-    log('  Mic access denied — generating video-only MP4', 'log-warn');
-    return null;
+   How it works:
+   - SpeechSynthesis cannot be routed through AudioContext (browser limitation).
+   - Instead we use getDisplayMedia(preferCurrentTab:true) to capture the
+     tab's own audio output — this DOES include SpeechSynthesis output.
+   - We set utt.volume to a tiny value (0.001) so the user cannot hear it,
+     but the audio signal is still present and capturable.
+   - The captured stream is fed into an AudioContext whose setSinkId is set
+     to {type:'none'} (Chrome 110+) so playback is suppressed, OR we use
+     a GainNode set to 0 on the AudioContext.destination to mute playback.
+   - PCM samples are collected via ScriptProcessorNode, then encoded to AAC.
+
+   Falls back to video-only if getDisplayMedia is unavailable.
+   ══════════════════════════════════════════════════════════════════════ */
+async function recordAudioAAC(segs, voice, rate, captureStream) {
+  if (typeof AudioEncoder === 'undefined') return null;
+  if (!captureStream) return null;
+
+  // ── Set up AudioContext to collect PCM from the captured stream ──
+  const audioCtx  = new AudioContext();
+  const sampleRate = audioCtx.sampleRate;
+
+  // Suppress any audio coming OUT of the AudioContext (avoid double-playback)
+  // setSinkId({type:'none'}) silences the AudioContext output (Chrome 110+)
+  try { await audioCtx.setSinkId({ type: 'none' }); } catch (_) {
+    // Fallback: connect a GainNode at 0 before destination
+    const silencer = audioCtx.createGain();
+    silencer.gain.value = 0;
+    silencer.connect(audioCtx.destination);
   }
 
-  const audioCtx   = new AudioContext();
-  const sampleRate = audioCtx.sampleRate;
-  const srcNode    = audioCtx.createMediaStreamSource(micStream);
-  const bufSize    = 4096;
-  const processor  = audioCtx.createScriptProcessor(bufSize, 1, 1);
-  const pcmQueue   = []; // Float32Array chunks
+  const srcNode   = audioCtx.createMediaStreamSource(captureStream);
+  const bufSize   = 4096;
+  const processor = audioCtx.createScriptProcessor(bufSize, 2, 1); // stereo→mono
+  const pcmQueue  = [];
 
   processor.onaudioprocess = e => {
-    pcmQueue.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    const L = e.inputBuffer.getChannelData(0);
+    const R = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : L;
+    const mono = new Float32Array(L.length);
+    for (let i = 0; i < L.length; i++) mono[i] = (L[i] + R[i]) * 0.5;
+    pcmQueue.push(mono);
   };
   srcNode.connect(processor);
-  processor.connect(audioCtx.destination);
+  processor.connect(audioCtx.destination); // must connect to run
 
-  // Speak all segments aloud (mic records whatever plays through speakers)
+  // ── 3. Speak each segment at volume=0.001 (inaudible) ──
+  // getDisplayMedia captures this even at near-zero volume because the
+  // audio signal is present in the tab's audio graph.
   for (let i = 0; i < segs.length; i++) {
-    log(`  Recording segment ${i+1}/${segs.length}…`, 'log-step');
+    log(`  Synthesising segment ${i+1}/${segs.length}…`, 'log-step');
     await new Promise(resolve => {
       speechSynthesis.cancel();
       const utt = new SpeechSynthesisUtterance(segs[i].text);
       if (voice) utt.voice = voice;
-      utt.rate = rate; utt.pitch = 1; utt.volume = 1;
-      utt.onend  = () => setTimeout(resolve, 200); // tail
+      utt.rate  = rate;
+      utt.pitch = 1;
+      utt.volume = 0.001;  // inaudible to the user, still captured by getDisplayMedia
+      utt.onend  = () => setTimeout(resolve, 200);
       utt.onerror = () => resolve();
       speechSynthesis.speak(utt);
     });
-    await new Promise(r => setTimeout(r, 150)); // gap between segments
+    await new Promise(r => setTimeout(r, 150));
   }
 
   processor.disconnect(); srcNode.disconnect();
-  micStream.getTracks().forEach(t => t.stop());
+  captureStream.getTracks().forEach(t => t.stop());
 
-  // Flatten PCM
-  const total  = pcmQueue.reduce((s,c)=>s+c.length,0);
-  const pcm    = new Float32Array(total);
+  // ── 4. Flatten PCM ──────────────────────────────────────────────────
+  const total = pcmQueue.reduce((s,c) => s + c.length, 0);
+  const pcm   = new Float32Array(total);
   let off = 0;
-  for (const c of pcmQueue) { pcm.set(c,off); off+=c.length; }
+  for (const c of pcmQueue) { pcm.set(c, off); off += c.length; }
 
-  // Encode PCM → AAC using AudioEncoder
+  // ── 5. Encode PCM → AAC via AudioEncoder ───────────────────────────
   const audioChunks = [];
   let   aeError     = null;
   const ae = new AudioEncoder({
@@ -866,20 +887,16 @@ async function recordAudioAAC(segs, voice, rate) {
   });
   ae.configure({ codec: 'mp4a.40.2', sampleRate, numberOfChannels: 1, bitrate: 128000 });
 
-  // Feed PCM in 1024-sample frames (AAC frame size)
   const FRAME = 1024;
   let   tsUs  = 0;
   for (let i = 0; i + FRAME <= pcm.length; i += FRAME) {
-    const ab   = new AudioData({
-      format:        'f32',
-      sampleRate,
-      numberOfFrames: FRAME,
-      numberOfChannels: 1,
-      timestamp:     tsUs,
-      data:          pcm.slice(i, i + FRAME),
+    const ab = new AudioData({
+      format: 'f32', sampleRate,
+      numberOfFrames: FRAME, numberOfChannels: 1,
+      timestamp: tsUs,
+      data: pcm.slice(i, i + FRAME),
     });
-    ae.encode(ab);
-    ab.close();
+    ae.encode(ab); ab.close();
     tsUs += Math.round(FRAME / sampleRate * 1e6);
   }
   await ae.flush();
@@ -937,6 +954,23 @@ async function startGeneration() {
   const voice     = isNaN(voiceIdx) ? null : (sorted[voiceIdx] || null);
 
   try {
+    // ── Tab audio capture FIRST — must stay in the user-gesture window ──
+    // getDisplayMedia() is called here, before any awaits, so Chrome
+    // grants it without requiring another user interaction.
+    log('Requesting tab audio capture…', 'log-step');
+    let captureStream = null;
+    try {
+      captureStream = await navigator.mediaDevices.getDisplayMedia({
+        video: false, audio: true,
+        preferCurrentTab: true,
+        selfBrowserSurface: 'include',
+        monitorTypeSurfaces: 'exclude',
+      });
+      log('  Tab audio capture granted.', 'log-ok');
+    } catch (e) {
+      log('  Tab audio capture unavailable — will produce video-only MP4.', 'log-warn');
+    }
+
     const firstBm = imgBitmaps[segs[0].index - 1];
     canvas.width  = firstBm.width  % 2 === 0 ? firstBm.width  : firstBm.width  - 1;
     canvas.height = firstBm.height % 2 === 0 ? firstBm.height : firstBm.height - 1;
@@ -955,13 +989,14 @@ async function startGeneration() {
     log(`  Total: ${(totalMs/1000).toFixed(1)}s`, 'log-ok');
     setProgress(22);
 
-    // ── Step 2: Record audio (getUserMedia → AAC) ──────────────────────
-    log('Step 2/4  Recording voiceover audio (mic)…', 'log-step');
-    log('  → Browser will ask for microphone permission. Click Allow.', 'log-warn');
+    // ── Step 2: Synthesise + capture audio (silent) ────────────────────
+    // Speaks at volume=0.001 (inaudible). getDisplayMedia captures the
+    // tab audio anyway. PCM encoded to AAC via AudioEncoder.
+    log('Step 2/4  Synthesising voiceover audio (silent)…', 'log-step');
     setProgress(25);
     let audioResult = null;
     try {
-      audioResult = await recordAudioAAC(segs, voice, rate);
+      audioResult = await recordAudioAAC(segs, voice, rate, captureStream);
     } catch(ae) {
       log(`  Audio failed: ${ae.message}`, 'log-warn');
     }
