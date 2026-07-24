@@ -435,7 +435,7 @@ Your narration for screenshot 2 goes here..."></textarea>
    Supports: single H.264 AVC video track, no audio, in-memory output.
    ══════════════════════════════════════════════════════════════════════ */
 
-function buildMp4(encodedChunks, width, height, fps) {
+function buildMp4(encodedChunks, width, height, fps, avcDescription) {
   const TIMESCALE = 90000;
 
   function u8arr(...bytes) { return new Uint8Array(bytes); }
@@ -538,14 +538,54 @@ function buildMp4(encodedChunks, width, height, fps) {
     return data;
   }
 
-  const keyChunk = encodedChunks.find(c => c.type === 'key');
-  if (!keyChunk) throw new Error('No keyframe found in encoded chunks');
-  const { sps, pps } = findAvcC(keyChunk.data);
-  if (!sps || !pps) throw new Error(
-    'Could not find SPS/PPS in H.264 stream. ' +
-    `Codec format: ${isAnnexB(keyChunk.data) ? 'Annex B' : 'AVCC'}. ` +
-    `NALUs found: ${getNalus(keyChunk.data).map(n => n[0]&0x1f).join(',')}`
-  );
+  // Extract SPS/PPS — prefer AVCDecoderConfigurationRecord from metadata,
+  // fall back to parsing the bitstream (works for Annex B and AVCC).
+  //
+  // AVCDecoderConfigurationRecord layout (ISO 14496-15 §5.2.4.1):
+  //   1  configurationVersion (0x01)
+  //   1  AVCProfileIndication
+  //   1  profile_compatibility
+  //   1  AVCLevelIndication
+  //   1  lengthSizeMinusOne (0xff → 4-byte lengths)
+  //   1  numSPS (0xe1 → 1 SPS, high 3 bits = 0b111)
+  //   2  spsLength
+  //   N  sps bytes
+  //   1  numPPS (0x01)
+  //   2  ppsLength
+  //   N  pps bytes
+  let sps, pps;
+  if (avcDescription && avcDescription.length > 8) {
+    // Parse AVCDecoderConfigurationRecord
+    const d   = avcDescription;
+    let   off = 5; // skip version, profile, compat, level, lengthSize
+    const numSps = d[off++] & 0x1f;
+    for (let i = 0; i < numSps; i++) {
+      const len = (d[off] << 8) | d[off + 1]; off += 2;
+      if (!sps) sps = d.slice(off, off + len);
+      off += len;
+    }
+    const numPps = d[off++];
+    for (let i = 0; i < numPps; i++) {
+      const len = (d[off] << 8) | d[off + 1]; off += 2;
+      if (!pps) pps = d.slice(off, off + len);
+      off += len;
+    }
+  }
+  // Fallback: scan the keyframe bitstream
+  if (!sps || !pps) {
+    const keyChunk = encodedChunks.find(c => c.type === 'key');
+    if (!keyChunk) throw new Error('No keyframe found in encoded chunks');
+    ({ sps, pps } = findAvcC(keyChunk.data));
+  }
+  if (!sps || !pps) {
+    const keyChunk = encodedChunks.find(c => c.type === 'key');
+    throw new Error(
+      'Could not find SPS/PPS. ' +
+      `avcDescription: ${avcDescription ? avcDescription.length + ' bytes' : 'none'}. ` +
+      `Bitstream format: ${keyChunk ? (isAnnexB(keyChunk.data) ? 'AnnexB' : 'AVCC') : 'no keyframe'}. ` +
+      `NALUs: ${keyChunk ? getNalus(keyChunk.data).map(n => n[0]&0x1f).join(',') : 'n/a'}`
+    );
+  }
 
   const avcC = box('avcC',
     u8arr(1, sps[1], sps[2], sps[3], 0xff, 0xe1),
@@ -1142,10 +1182,17 @@ async function startGeneration() {
     const encodedChunks = [];
     let encodeError     = null;
 
+    let avcDescription = null;  // AVCDecoderConfigurationRecord from first keyframe
+
     const encoder = new VideoEncoder({
-      output: (chunk) => {
+      output: (chunk, metadata) => {
         const data = new Uint8Array(chunk.byteLength);
         chunk.copyTo(data);
+        // Capture the AVCDecoderConfigurationRecord from the first keyframe.
+        // Chrome Main/High Profile puts SPS/PPS here, not in the bitstream.
+        if (chunk.type === 'key' && !avcDescription && metadata?.decoderConfig?.description) {
+          avcDescription = new Uint8Array(metadata.decoderConfig.description);
+        }
         encodedChunks.push({
           data,
           timestamp: chunk.timestamp,
@@ -1186,7 +1233,7 @@ async function startGeneration() {
 
     // ── Step 4: Mux into MP4 ───────────────────────────────────────────
     log('Step 4/4  Writing MP4…', 'log-step');
-    const mp4Bytes = buildMp4(encodedChunks, canvas.width, canvas.height, FPS);
+    const mp4Bytes = buildMp4(encodedChunks, canvas.width, canvas.height, FPS, avcDescription);
     setProgress(98);
 
     const mp4Blob  = new Blob([mp4Bytes], { type: 'video/mp4' });
