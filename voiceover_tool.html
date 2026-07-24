@@ -212,7 +212,7 @@
 
   <div class="header">
     <h1>Voiceover Generator <span class="badge">Runs in Browser · MP4 + Audio</span></h1>
-    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and generate a perfectly synced MP4 video with AI voiceover — <strong>no installation, no backend, no dependencies.</strong></p>
+    <p>Upload screenshots, annotate your transcript with <code>[screenshot:N]</code> markers, and download a single MP4 with AI voiceover — <strong>no installation, no backend, no dependencies.</strong></p>
   </div>
 
   <div class="steps-grid">
@@ -222,7 +222,7 @@
     </div>
     <div class="step-card">
       <span class="step-num">2</span><span class="step-title">Annotate Transcript</span>
-      <p class="step-desc">Add <code>[screenshot:N]</code> markers in your transcript to control exactly when each screenshot appears.</p>
+      <p class="step-desc">Add <code>[screenshot:N]</code> markers to control when each screenshot appears.</p>
     </div>
     <div class="step-card">
       <span class="step-num">3</span><span class="step-title">Configure Settings</span>
@@ -230,7 +230,7 @@
     </div>
     <div class="step-card">
       <span class="step-num">4</span><span class="step-title">Generate &amp; Download</span>
-      <p class="step-desc">Download an MP4 with your slides and a separate WAV voiceover, or combine them yourself.</p>
+      <p class="step-desc">One MP4 file with both video and voiceover audio — ready to share.</p>
     </div>
   </div>
 
@@ -251,7 +251,6 @@
   <div class="marker-hint">
     <strong>How to sync screenshots to narration:</strong>
     Place <code>[screenshot:N]</code> at the point in your transcript where screenshot N should appear.
-    The screenshot stays on screen for exactly as long as the following narration takes to speak.
     <button class="copy-btn" onclick="copyExample()">Copy example</button>
     <pre id="example-transcript">[screenshot:1]
 Welcome to the Test Generation demo. In this video we will walk
@@ -341,7 +340,6 @@ Your narration for screenshot 2 goes here..."></textarea>
     <div class="status-log" id="status-log"></div>
   </div>
 
-  <!-- Result: MP4 video download -->
   <div class="result-row" id="result-row">
     <svg class="result-icon" width="28" height="28" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.5">
@@ -355,36 +353,19 @@ Your narration for screenshot 2 goes here..."></textarea>
     <a class="btn-download" id="result-dl" href="#">Download MP4</a>
   </div>
 
-  <!-- Result: WAV audio download (shown when audio was captured) -->
-  <div class="result-row" id="result-row-audio" style="border-color:#dbeafe;background:#eff6ff;margin-top:8px;">
-    <svg class="result-icon" style="color:#3b82d4;" width="28" height="28" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="1.5">
-      <path d="M9 18V5l12-2v13"/>
-      <circle cx="6" cy="18" r="3"/>
-      <circle cx="18" cy="16" r="3"/>
-    </svg>
-    <div class="result-info">
-      <strong id="result-audio-filename">demo_voiceover.wav</strong>
-      <span id="result-audio-meta">Voiceover audio — combine with the MP4 in any video editor</span>
-    </div>
-    <a class="btn-download" style="background:#3b82d4;" id="result-dl-audio" href="#">Download WAV</a>
-  </div>
-
   <details class="info-block" style="margin-top:28px;">
     <summary>How it works — all in-browser, no server needed</summary>
     <div class="info-block-body">
-      <p>Everything runs inside your browser — no downloads, no CORS issues, no server headers required:</p>
+      <p>Everything runs inside your browser — no downloads, no server, no CORS:</p>
       <ul class="pipeline-steps">
         <li><span class="pipe-num">1</span><span><strong>Parse markers</strong> — Transcript split at every <code>[screenshot:N]</code> tag into segments.</span></li>
-        <li><span class="pipe-num">2</span><span><strong>TTS timing</strong> — SpeechSynthesis speaks each segment silently (volume 0). Exact duration measured on <code>onend</code>.</span></li>
-        <li><span class="pipe-num">3</span><span><strong>Record audio</strong> — SpeechSynthesis speaks again at full volume while tab audio is captured via <code>getDisplayMedia(preferCurrentTab:true)</code> + <code>ScriptProcessorNode</code> → PCM → WAV file. Requires Chrome 109+. Gracefully skipped if unavailable.</span></li>
-        <li><span class="pipe-num">4</span><span><strong>Encode frames</strong> — Screenshot drawn to canvas, sampled as <code>ImageBitmap</code> frames at 10 fps using WebCodecs <code>VideoEncoder</code> (H.264).</span></li>
-        <li><span class="pipe-num">5</span><span><strong>Mux MP4</strong> — Pure-JS ISO BMFF muxer writes a real MP4 container with correct duration — fully seekable.</span></li>
-        <li><span class="pipe-num">6</span><span><strong>Download</strong> — MP4 (video, timed to voiceover length) and WAV (audio) are both offered as downloads. Merge them with any free video editor.</span></li>
+        <li><span class="pipe-num">2</span><span><strong>TTS timing</strong> — SpeechSynthesis speaks each segment silently (volume 0). Duration measured on <code>onend</code>.</span></li>
+        <li><span class="pipe-num">3</span><span><strong>Record audio</strong> — SpeechSynthesis speaks again at volume 1. Audio is captured via <code>getUserMedia</code> and encoded to AAC using WebCodecs <code>AudioEncoder</code>.</span></li>
+        <li><span class="pipe-num">4</span><span><strong>Encode video</strong> — Screenshots encoded as H.264 frames via WebCodecs <code>VideoEncoder</code> at 10 fps.</span></li>
+        <li><span class="pipe-num">5</span><span><strong>Mux MP4</strong> — Pure-JS ISO BMFF muxer writes a single MP4 with both video (H.264) and audio (AAC) tracks — fully seekable.</span></li>
       </ul>
       <p style="margin-top:10px;font-size:12.5px;color:#57606a;">
-        Output: <strong>MP4</strong> (H.264 silent video, timed to speech) + <strong>WAV</strong> (voiceover audio).
-        Works on GitHub Pages with no special HTTP headers — pure static HTML.
+        Audio capture uses <code>getUserMedia</code> (microphone permission). On most laptops the mic picks up the TTS playing through speakers. For best results use headphones and speak in a quiet environment — or use a loopback device.
       </p>
     </div>
   </details>
@@ -400,16 +381,15 @@ Your narration for screenshot 2 goes here..."></textarea>
           <tr><td>Reuse</td><td>Reference the same screenshot multiple times</td></tr>
           <tr><td>No markers</td><td>All text is narrated over screenshot 1</td></tr>
           <tr><td>Missing image</td><td>If you reference <code>[screenshot:5]</code> but only uploaded 3 images, generation fails with a clear error</td></tr>
-          <tr><td>Other brackets</td><td><code>[pause]</code>, <code>[note: ...]</code> etc. are stripped from narration timing</td></tr>
         </tbody>
       </table>
     </div>
   </details>
 
   <div class="compat-notice">
-    <strong>Browser:</strong> Use <strong>Chrome 94+</strong> or <strong>Edge 94+</strong> (desktop) — requires WebCodecs API (<code>VideoEncoder</code>).<br>
-    No downloads, no CORS, no special server headers — works on GitHub Pages as a plain HTML file.<br>
-    During generation, TTS will play through your speakers briefly for audio recording. Chrome 109+ captures it automatically via tab audio; older browsers produce video-only. Keep your volume on.
+    <strong>Browser:</strong> Chrome 94+ or Edge 94+ (desktop) — requires WebCodecs (<code>VideoEncoder</code> + <code>AudioEncoder</code>).<br>
+    <strong>Audio:</strong> Click <em>Allow</em> when the browser asks for microphone access — it captures the TTS playing through your speakers.<br>
+    Works on GitHub Pages as a plain static HTML file. No installs, no server.
   </div>
 
 </div>
@@ -418,329 +398,255 @@ Your narration for screenshot 2 goes here..."></textarea>
 
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
-   VOICEOVER GENERATOR — pure JS, runs entirely in Chrome/Edge 94+
-   Outputs: MP4 (H.264 video, timed to speech) + WAV (voiceover audio)
-   Zero external dependencies. Works on GitHub Pages.
-
+   VOICEOVER GENERATOR
+   Outputs: single MP4 with H.264 video + AAC audio
    Pipeline:
-     1. speakSilent()    → SpeechSynthesis volume=0, measures each segment duration (ms)
-     2. recordSegment()  → SpeechSynthesis volume=1, AudioContext captures PCM samples
-     3. buildWav()       → Concatenate PCM samples → WAV file
-     4. VideoEncoder     → encodes canvas frames as H.264 AVC, collects chunks
-     5. buildMp4()       → ISO BMFF muxer assembles real .mp4 bytes
+     1. speakSilent()   → measure each segment duration (ms)
+     2. getUserMedia()  → open mic stream for audio capture
+     3. speakAudible() + AudioEncoder → encode AAC audio chunks while TTS plays
+     4. VideoEncoder   → encode H.264 video frames
+     5. buildMp4()     → ISO BMFF muxer with video + audio track
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════
-   Minimal ISO Base Media File Format (MP4) muxer — pure JS, no deps
-   Supports: single H.264 AVC video track, no audio, in-memory output.
+   ISO BMFF MP4 muxer — H.264 video + optional AAC audio, pure JS
    ══════════════════════════════════════════════════════════════════════ */
+function buildMp4(videoChunks, width, height, fps, avcDescription, audioChunks, audioSampleRate) {
+  const VTS = 90000; // video timescale (90 kHz)
+  const ATS = audioSampleRate || 44100; // audio timescale = sample rate
 
-function buildMp4(encodedChunks, width, height, fps, avcDescription) {
-  const TIMESCALE = 90000;
-
-  function u8arr(...bytes) { return new Uint8Array(bytes); }
-  function u32be(n) {
-    return new Uint8Array([(n>>>24)&0xff,(n>>>16)&0xff,(n>>>8)&0xff,n&0xff]);
-  }
-  function u16be(n) { return new Uint8Array([(n>>>8)&0xff,n&0xff]); }
+  // ── helpers ────────────────────────────────────────────────────────
+  function u8arr(...b) { return new Uint8Array(b); }
+  function u32be(n) { return new Uint8Array([(n>>>24)&0xff,(n>>>16)&0xff,(n>>>8)&0xff,n&0xff]); }
+  function u16be(n) { return new Uint8Array([(n>>>8)&0xff, n&0xff]); }
   function str4(s)  { return new Uint8Array([s.charCodeAt(0),s.charCodeAt(1),s.charCodeAt(2),s.charCodeAt(3)]); }
-
-  function box(type, ...children) {
-    const payload = concat(...children);
-    return concat(u32be(8 + payload.length), str4(type), payload);
-  }
-  function fullBox(type, version, flags, ...children) {
-    return box(type, u8arr(version,(flags>>16)&0xff,(flags>>8)&0xff,flags&0xff), ...children);
+  function zeros(n) { return new Uint8Array(n); }
+  function fixed1616(n) {
+    const i = Math.floor(n), f = Math.round((n-i)*65536);
+    return new Uint8Array([(i>>>8)&0xff,i&0xff,(f>>>8)&0xff,f&0xff]);
   }
   function concat(...arrays) {
-    let len = 0;
-    for (const a of arrays) len += a.length;
-    const out = new Uint8Array(len);
-    let off = 0;
+    let len = 0; for (const a of arrays) len += a.length;
+    const out = new Uint8Array(len); let off = 0;
     for (const a of arrays) { out.set(a, off); off += a.length; }
     return out;
   }
-  function fixed1616(n) {
-    const i = Math.floor(n), f = Math.round((n - i) * 65536);
-    return new Uint8Array([(i>>>8)&0xff,i&0xff,(f>>>8)&0xff,f&0xff]);
+  function box(type, ...children) {
+    const p = concat(...children);
+    return concat(u32be(8 + p.length), str4(type), p);
   }
-  function zeros(n) { return new Uint8Array(n); }
-
-  const samples = encodedChunks.map(c => ({
-    data:  c.data,
-    pts:   Math.round(c.timestamp  / 1e6 * TIMESCALE),
-    dur:   Math.round((c.duration||0) / 1e6 * TIMESCALE),
-    isKey: c.type === 'key',
-  }));
-  const totalDurTicks = samples.reduce((s, c) => s + c.dur, 0);
-
-  // Detect whether data uses Annex B start codes (00 00 00 01)
-  // or is already AVCC (4-byte big-endian length prefix).
-  // Chrome Baseline emits Annex B; Main Profile emits AVCC.
-  function isAnnexB(data) {
-    return data.length >= 4 &&
-           data[0] === 0 && data[1] === 0 && data[2] === 0 && data[3] === 1;
+  function fullBox(type, ver, flags, ...children) {
+    return box(type, u8arr(ver,(flags>>16)&0xff,(flags>>8)&0xff,flags&0xff), ...children);
   }
 
-  // Parse NALUs from Annex B stream
-  function nalusFromAnnexB(data) {
-    const list = [];
-    let i = 0;
-    while (i < data.length - 4) {
-      if (data[i]===0 && data[i+1]===0 && data[i+2]===0 && data[i+3]===1) {
-        let start = i + 4, end = data.length;
-        for (let j = start; j < data.length - 3; j++) {
-          if (data[j]===0 && data[j+1]===0 && data[j+2]===0 && data[j+3]===1) { end = j; break; }
-        }
-        list.push(data.slice(start, end));
-        i = end;
-      } else { i++; }
+  // ── Annex B / AVCC detection & parsing ─────────────────────────────
+  function isAnnexB(d) { return d.length>=4 && d[0]===0&&d[1]===0&&d[2]===0&&d[3]===1; }
+  function nalusFromAnnexB(d) {
+    const list=[]; let i=0;
+    while(i<d.length-4){
+      if(d[i]===0&&d[i+1]===0&&d[i+2]===0&&d[i+3]===1){
+        let s=i+4,e=d.length;
+        for(let j=s;j<d.length-3;j++) if(d[j]===0&&d[j+1]===0&&d[j+2]===0&&d[j+3]===1){e=j;break;}
+        list.push(d.slice(s,e)); i=e;
+      } else i++;
     }
     return list;
   }
-
-  // Parse NALUs from AVCC stream (4-byte length prefix per NALU)
-  function nalusFromAvcc(data) {
-    const list = [];
-    let i = 0;
-    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    while (i + 4 <= data.length) {
-      const len = dv.getUint32(i);
-      i += 4;
-      if (len === 0 || i + len > data.length) break;
-      list.push(data.slice(i, i + len));
-      i += len;
-    }
+  function nalusFromAvcc(d) {
+    const list=[],dv=new DataView(d.buffer,d.byteOffset,d.byteLength); let i=0;
+    while(i+4<=d.length){ const len=dv.getUint32(i); i+=4; if(!len||i+len>d.length) break; list.push(d.slice(i,i+len)); i+=len; }
     return list;
   }
-
-  function getNalus(data) {
-    return isAnnexB(data) ? nalusFromAnnexB(data) : nalusFromAvcc(data);
+  function getNalus(d) { return isAnnexB(d)?nalusFromAnnexB(d):nalusFromAvcc(d); }
+  function toAvcc(d) {
+    if(isAnnexB(d)) return concat(...nalusFromAnnexB(d).map(n=>concat(u32be(n.length),n)));
+    return d;
   }
 
-  function findAvcC(data) {
-    let sps = null, pps = null;
-    for (const n of getNalus(data)) {
-      const t = n[0] & 0x1f;
-      if (t === 7) sps = n;
-      if (t === 8) pps = n;
-    }
-    return { sps, pps };
-  }
-
-  // Repackage any chunk (Annex B or AVCC) into AVCC (4-byte length-prefixed NALUs)
-  function toAvcc(data) {
-    if (isAnnexB(data)) {
-      const parts = nalusFromAnnexB(data).map(n => concat(u32be(n.length), n));
-      return concat(...parts);
-    }
-    // Already AVCC — return as-is
-    return data;
-  }
-
-  // Extract SPS/PPS — prefer AVCDecoderConfigurationRecord from metadata,
-  // fall back to parsing the bitstream (works for Annex B and AVCC).
-  //
-  // AVCDecoderConfigurationRecord layout (ISO 14496-15 §5.2.4.1):
-  //   1  configurationVersion (0x01)
-  //   1  AVCProfileIndication
-  //   1  profile_compatibility
-  //   1  AVCLevelIndication
-  //   1  lengthSizeMinusOne (0xff → 4-byte lengths)
-  //   1  numSPS (0xe1 → 1 SPS, high 3 bits = 0b111)
-  //   2  spsLength
-  //   N  sps bytes
-  //   1  numPPS (0x01)
-  //   2  ppsLength
-  //   N  pps bytes
+  // ── Extract SPS/PPS ─────────────────────────────────────────────────
   let sps, pps;
   if (avcDescription && avcDescription.length > 8) {
-    // Parse AVCDecoderConfigurationRecord
-    const d   = avcDescription;
-    let   off = 5; // skip version, profile, compat, level, lengthSize
-    const numSps = d[off++] & 0x1f;
-    for (let i = 0; i < numSps; i++) {
-      const len = (d[off] << 8) | d[off + 1]; off += 2;
-      if (!sps) sps = d.slice(off, off + len);
-      off += len;
-    }
-    const numPps = d[off++];
-    for (let i = 0; i < numPps; i++) {
-      const len = (d[off] << 8) | d[off + 1]; off += 2;
-      if (!pps) pps = d.slice(off, off + len);
-      off += len;
-    }
-  }
-  // Fallback: scan the keyframe bitstream
-  if (!sps || !pps) {
-    const keyChunk = encodedChunks.find(c => c.type === 'key');
-    if (!keyChunk) throw new Error('No keyframe found in encoded chunks');
-    ({ sps, pps } = findAvcC(keyChunk.data));
+    const d=avcDescription; let off=5;
+    const ns=d[off++]&0x1f;
+    for(let i=0;i<ns;i++){const l=(d[off]<<8)|d[off+1];off+=2;if(!sps)sps=d.slice(off,off+l);off+=l;}
+    const np=d[off++];
+    for(let i=0;i<np;i++){const l=(d[off]<<8)|d[off+1];off+=2;if(!pps)pps=d.slice(off,off+l);off+=l;}
   }
   if (!sps || !pps) {
-    const keyChunk = encodedChunks.find(c => c.type === 'key');
-    throw new Error(
-      'Could not find SPS/PPS. ' +
-      `avcDescription: ${avcDescription ? avcDescription.length + ' bytes' : 'none'}. ` +
-      `Bitstream format: ${keyChunk ? (isAnnexB(keyChunk.data) ? 'AnnexB' : 'AVCC') : 'no keyframe'}. ` +
-      `NALUs: ${keyChunk ? getNalus(keyChunk.data).map(n => n[0]&0x1f).join(',') : 'n/a'}`
+    const kc=videoChunks.find(c=>c.type==='key');
+    if(kc) ({sps,pps}=findAvcCFromBitstream(kc.data));
+  }
+  if (!sps || !pps) throw new Error('Could not find H.264 SPS/PPS');
+
+  function findAvcCFromBitstream(data) {
+    let sps=null,pps=null;
+    for(const n of getNalus(data)){const t=n[0]&0x1f;if(t===7)sps=n;if(t===8)pps=n;}
+    return {sps,pps};
+  }
+
+  // ── Video samples ───────────────────────────────────────────────────
+  const vSamples = videoChunks.map(c=>({
+    data:  c.data,
+    dur:   Math.round((c.duration||0)/1e6*VTS),
+    isKey: c.type==='key',
+  }));
+  const vTotalTicks = vSamples.reduce((s,c)=>s+c.dur,0);
+
+  function buildVideoTrak(chunkOffsetPlaceholder) {
+    const avcC = box('avcC', u8arr(1,sps[1],sps[2],sps[3],0xff,0xe1), u16be(sps.length),sps, u8arr(0x01), u16be(pps.length),pps);
+    const avc1 = box('avc1', zeros(6),u16be(1),zeros(16), u16be(width),u16be(height),
+      u8arr(0,72,0,0,0,72,0,0),zeros(4),u16be(1),zeros(32),u16be(0x0018),u8arr(0xff,0xff), avcC);
+
+    // stts
+    const sttsE=[]; let rd=vSamples[0].dur,rc=1;
+    for(let i=1;i<vSamples.length;i++){if(vSamples[i].dur===rd)rc++;else{sttsE.push([rc,rd]);rd=vSamples[i].dur;rc=1;}}
+    sttsE.push([rc,rd]);
+    const sttsBuf=new Uint8Array(4+sttsE.length*8); const sttsDV=new DataView(sttsBuf.buffer);
+    sttsDV.setUint32(0,sttsE.length); sttsE.forEach(([c,d],i)=>{sttsDV.setUint32(4+i*8,c);sttsDV.setUint32(8+i*8,d);});
+
+    // stss
+    const ki=vSamples.reduce((a,s,i)=>{if(s.isKey)a.push(i+1);return a;},[]);
+    const stssBuf=new Uint8Array(4+ki.length*4); const stssDV=new DataView(stssBuf.buffer);
+    stssDV.setUint32(0,ki.length); ki.forEach((v,i)=>stssDV.setUint32(4+i*4,v));
+
+    // stsz
+    const stszBuf=new Uint8Array(8+vSamples.length*4); const stszDV=new DataView(stszBuf.buffer);
+    stszDV.setUint32(0,0); stszDV.setUint32(4,vSamples.length);
+    vSamples.forEach((s,i)=>stszDV.setUint32(8+i*4,toAvcc(s.data).length));
+
+    // stsc — all samples in one chunk
+    const stscBuf=new Uint8Array(4+12); const stscDV=new DataView(stscBuf.buffer);
+    stscDV.setUint32(0,1);stscDV.setUint32(4,1);stscDV.setUint32(8,vSamples.length);stscDV.setUint32(12,1);
+
+    // stco placeholder
+    const stcoBuf=new Uint8Array(8); const stcoDV=new DataView(stcoBuf.buffer);
+    stcoDV.setUint32(0,1); stcoDV.setUint32(4,chunkOffsetPlaceholder);
+
+    const stbl=box('stbl', fullBox('stsd',0,0,u32be(1),avc1), fullBox('stts',0,0,sttsBuf),
+      fullBox('stss',0,0,stssBuf), fullBox('stsc',0,0,stscBuf), fullBox('stsz',0,0,stszBuf), fullBox('stco',0,0,stcoBuf));
+    const minf=box('minf', fullBox('vmhd',0,1,zeros(8)), box('dinf',fullBox('dref',0,0,u32be(1),fullBox('url ',0,1))), stbl);
+    const hdlr=fullBox('hdlr',0,0,zeros(4),str4('vide'),zeros(12),new Uint8Array([86,105,100,101,111,72,97,110,100,108,101,114,0]));
+    const mdhd=fullBox('mdhd',0,0,u32be(0),u32be(0),u32be(VTS),u32be(vTotalTicks),u16be(0x55c4),u16be(0));
+    const mdia=box('mdia',mdhd,hdlr,minf);
+    const tkhd=fullBox('tkhd',0,3,u32be(0),u32be(0),u32be(1),zeros(4),
+      u32be(Math.round(vTotalTicks/VTS*10000)),zeros(8),u16be(0),u16be(0),u16be(0x0100),zeros(2),
+      u32be(0x00010000),u32be(0),u32be(0),u32be(0),u32be(0x00010000),u32be(0),u32be(0),u32be(0),u32be(0x40000000),
+      fixed1616(width),u16be(0),fixed1616(height),u16be(0));
+    return box('trak',tkhd,mdia);
+  }
+
+  // ── Audio track ─────────────────────────────────────────────────────
+  const hasAudio = audioChunks && audioChunks.length > 0;
+  let aSamples = [];
+  let aTotalTicks = 0;
+  if (hasAudio) {
+    aSamples = audioChunks.map(c=>({
+      data: c.data,
+      dur:  Math.round((c.duration||0)/1e6*ATS),
+    }));
+    aTotalTicks = aSamples.reduce((s,c)=>s+c.dur,0);
+  }
+
+  function buildAudioTrak(chunkOffsetPlaceholder) {
+    // mp4a / esds box for AAC-LC
+    const esds = buildEsds(ATS);
+    const mp4a = box('mp4a', zeros(6),u16be(1),zeros(8),u16be(2),u16be(16),zeros(4),u16be(ATS),zeros(2), esds);
+
+    const sttsE2=[]; let rd2=aSamples[0].dur,rc2=1;
+    for(let i=1;i<aSamples.length;i++){if(aSamples[i].dur===rd2)rc2++;else{sttsE2.push([rc2,rd2]);rd2=aSamples[i].dur;rc2=1;}}
+    sttsE2.push([rc2,rd2]);
+    const sttsBuf2=new Uint8Array(4+sttsE2.length*8); const sttsDV2=new DataView(sttsBuf2.buffer);
+    sttsDV2.setUint32(0,sttsE2.length); sttsE2.forEach(([c,d],i)=>{sttsDV2.setUint32(4+i*8,c);sttsDV2.setUint32(8+i*8,d);});
+
+    const stszBuf2=new Uint8Array(8+aSamples.length*4); const stszDV2=new DataView(stszBuf2.buffer);
+    stszDV2.setUint32(0,0); stszDV2.setUint32(4,aSamples.length);
+    aSamples.forEach((s,i)=>stszDV2.setUint32(8+i*4,s.data.length));
+
+    const stscBuf2=new Uint8Array(4+12); const stscDV2=new DataView(stscBuf2.buffer);
+    stscDV2.setUint32(0,1);stscDV2.setUint32(4,1);stscDV2.setUint32(8,aSamples.length);stscDV2.setUint32(12,1);
+
+    const stcoBuf2=new Uint8Array(8); const stcoDV2=new DataView(stcoBuf2.buffer);
+    stcoDV2.setUint32(0,1); stcoDV2.setUint32(4,chunkOffsetPlaceholder);
+
+    const stbl2=box('stbl', fullBox('stsd',0,0,u32be(1),mp4a), fullBox('stts',0,0,sttsBuf2),
+      fullBox('stsc',0,0,stscBuf2), fullBox('stsz',0,0,stszBuf2), fullBox('stco',0,0,stcoBuf2));
+    const minf2=box('minf', fullBox('smhd',0,0,zeros(4)), box('dinf',fullBox('dref',0,0,u32be(1),fullBox('url ',0,1))), stbl2);
+    const hdlr2=fullBox('hdlr',0,0,zeros(4),str4('soun'),zeros(12),new Uint8Array([83,111,117,110,100,72,97,110,100,108,101,114,0]));
+    const mdhd2=fullBox('mdhd',0,0,u32be(0),u32be(0),u32be(ATS),u32be(aTotalTicks),u16be(0x55c4),u16be(0));
+    const mdia2=box('mdia',mdhd2,hdlr2,minf2);
+    const tkhd2=fullBox('tkhd',0,3,u32be(0),u32be(0),u32be(2),zeros(4),
+      u32be(Math.round(aTotalTicks/ATS*10000)),zeros(8),u16be(0),u16be(0),u16be(0x0100),zeros(2),
+      u32be(0x00010000),u32be(0),u32be(0),u32be(0),u32be(0x00010000),u32be(0),u32be(0),u32be(0),u32be(0x40000000),
+      u32be(0),u16be(0),u32be(0),u16be(0));
+    return box('trak',tkhd2,mdia2);
+  }
+
+  function buildEsds(sampleRate) {
+    // AudioSpecificConfig for AAC-LC: object type 2, sample rate index, 1 channel
+    const srIndex = [96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350].indexOf(sampleRate);
+    const sri = srIndex >= 0 ? srIndex : 4; // default 44100
+    // AAC-LC (2=AAC-LC), sri, channels=1
+    const asc = new Uint8Array([(2<<3)|(sri>>1), ((sri&1)<<7)|0x08]);
+
+    function esTag(tag, ...content) {
+      const p = concat(...content);
+      return concat(new Uint8Array([tag, p.length]), p);
+    }
+    const decoderConfig = esTag(0x04,
+      u8arr(0x40),       // Audio ISO/IEC 14496-3
+      u8arr(0x15),       // stream type Audio (0x05<<2|0x01)
+      u8arr(0,0,0),      // bufferSize
+      u32be(128000),     // maxBitrate
+      u32be(128000),     // avgBitrate
+      esTag(0x05, asc)   // DecoderSpecificInfo
     );
+    const slConfig = esTag(0x06, u8arr(0x02));
+    const esDescriptor = esTag(0x03, u16be(1), u8arr(0x00), decoderConfig, slConfig);
+    return fullBox('esds', 0, 0, esDescriptor);
   }
 
-  const avcC = box('avcC',
-    u8arr(1, sps[1], sps[2], sps[3], 0xff, 0xe1),
-    u16be(sps.length), sps,
-    u8arr(0x01),
-    u16be(pps.length), pps
-  );
-
-  const avc1 = box('avc1',
-    zeros(6), u16be(1), zeros(16),
-    u16be(width), u16be(height),
-    u8arr(0,72,0,0, 0,72,0,0), zeros(4), u16be(1), zeros(32),
-    u16be(0x0018), new Uint8Array([0xff,0xff]),
-    avcC
-  );
-
-  const sttsEntries = [];
-  let runDur = samples[0].dur, runCount = 1;
-  for (let i = 1; i < samples.length; i++) {
-    if (samples[i].dur === runDur) { runCount++; }
-    else { sttsEntries.push({count:runCount,delta:runDur}); runDur=samples[i].dur; runCount=1; }
-  }
-  sttsEntries.push({count:runCount,delta:runDur});
-  const sttsData = new Uint8Array(4 + sttsEntries.length*8);
-  const sttsDv = new DataView(sttsData.buffer);
-  sttsDv.setUint32(0, sttsEntries.length);
-  sttsEntries.forEach((e,i) => { sttsDv.setUint32(4+i*8,e.count); sttsDv.setUint32(8+i*8,e.delta); });
-
-  const keyIndices = samples.reduce((a,s,i)=>{ if(s.isKey) a.push(i+1); return a; },[]);
-  const stssData = new Uint8Array(4 + keyIndices.length*4);
-  const stssDv = new DataView(stssData.buffer);
-  stssDv.setUint32(0, keyIndices.length);
-  keyIndices.forEach((idx,i) => stssDv.setUint32(4+i*4,idx));
-
-  const stszData = new Uint8Array(8 + samples.length*4);
-  const stszDv = new DataView(stszData.buffer);
-  stszDv.setUint32(0, 0);
-  stszDv.setUint32(4, samples.length);
-  samples.forEach((s,i) => stszDv.setUint32(8+i*4, toAvcc(s.data).length));
-
-  const stscData = new Uint8Array(4+12);
-  const stscDv = new DataView(stscData.buffer);
-  stscDv.setUint32(0,1); stscDv.setUint32(4,1);
-  stscDv.setUint32(8,samples.length); stscDv.setUint32(12,1);
-
-  const stcoData = new Uint8Array(8);
-  const stcoDv = new DataView(stcoData.buffer);
-  stcoDv.setUint32(0,1); stcoDv.setUint32(4,0);
-
-  const stbl = box('stbl',
-    fullBox('stsd',0,0, u32be(1), avc1),
-    fullBox('stts',0,0, sttsData),
-    fullBox('stss',0,0, stssData),
-    fullBox('stsc',0,0, stscData),
-    fullBox('stsz',0,0, stszData),
-    fullBox('stco',0,0, stcoData),
-  );
-
-  const dinf = box('dinf', fullBox('dref',0,0, u32be(1), fullBox('url ',0,1)));
-  const vmhd = fullBox('vmhd',0,1, zeros(8));
-  const minf = box('minf', vmhd, dinf, stbl);
-
-  const hdlr = fullBox('hdlr',0,0, zeros(4), str4('vide'), zeros(12),
-    new Uint8Array([86,105,100,101,111,72,97,110,100,108,101,114,0]));
-  const mdhd = fullBox('mdhd',0,0,
-    u32be(0),u32be(0), u32be(TIMESCALE), u32be(totalDurTicks),
-    u16be(0x55c4), u16be(0)
-  );
-  const mdia = box('mdia', mdhd, hdlr, minf);
-
-  const tkhd = fullBox('tkhd',0,3,
-    u32be(0),u32be(0), u32be(1), zeros(4),
-    u32be(totalDurTicks * (10000/TIMESCALE)|0),
-    zeros(8), u16be(0),u16be(0), u16be(0x0100), zeros(2),
-    u32be(0x00010000),u32be(0),u32be(0),
-    u32be(0),u32be(0x00010000),u32be(0),
-    u32be(0),u32be(0),u32be(0x40000000),
-    fixed1616(width), u16be(0),
-    fixed1616(height), u16be(0),
-  );
-  const trak = box('trak', tkhd, mdia);
+  // ── Build moov ──────────────────────────────────────────────────────
+  const movieDurTicks = Math.round(vTotalTicks / VTS * 10000);
+  const nextTrackId   = hasAudio ? 3 : 2;
 
   const mvhd = fullBox('mvhd',0,0,
-    u32be(0),u32be(0), u32be(10000),
-    u32be(Math.round(totalDurTicks/TIMESCALE*10000)),
-    u32be(0x00010000), u16be(0x0100), zeros(10),
-    u32be(0x00010000),u32be(0),u32be(0),
-    u32be(0),u32be(0x00010000),u32be(0),
-    u32be(0),u32be(0),u32be(0x40000000),
-    zeros(24), u32be(2)
-  );
-  const moov = box('moov', mvhd, trak);
-
-  const sampleDataArrays = samples.map(s => toAvcc(s.data));
-  const mdatPayload = concat(...sampleDataArrays);
-  const mdat = concat(u32be(8 + mdatPayload.length), str4('mdat'), mdatPayload);
-
-  const ftyp = box('ftyp',
-    str4('isom'), u32be(0x200),
-    str4('isom'), str4('iso2'), str4('avc1'), str4('mp41')
+    u32be(0),u32be(0),u32be(10000),u32be(movieDurTicks),
+    u32be(0x00010000),u16be(0x0100),zeros(10),
+    u32be(0x00010000),u32be(0),u32be(0),u32be(0),u32be(0x00010000),u32be(0),u32be(0),u32be(0),u32be(0x40000000),
+    zeros(24),u32be(nextTrackId)
   );
 
-  const ftypLen = ftyp.length;
-  const moovLen = moov.length;
-  const chunkOffset = ftypLen + moovLen + 8;
+  // Build moov with placeholder stco offsets (0) — we'll patch them after
+  const vTrak = buildVideoTrak(0);
+  const aTrak = hasAudio ? buildAudioTrak(0) : null;
+  const moov  = aTrak ? box('moov',mvhd,vTrak,aTrak) : box('moov',mvhd,vTrak);
+
+  // ── Build mdat ──────────────────────────────────────────────────────
+  const ftyp = box('ftyp', str4('isom'),u32be(0x200), str4('isom'),str4('iso2'),str4('avc1'),str4('mp41'));
+
+  const vData    = concat(...vSamples.map(s=>toAvcc(s.data)));
+  const aData    = hasAudio ? concat(...aSamples.map(s=>s.data)) : new Uint8Array(0);
+  const mdatData = hasAudio ? concat(vData, aData) : vData;
+  const mdat     = concat(u32be(8+mdatData.length), str4('mdat'), mdatData);
+
+  // ── Patch stco offsets ──────────────────────────────────────────────
+  // Video chunk starts right after mdat header: ftyp + moov + 8
+  const vChunkOffset = ftyp.length + moov.length + 8;
+  // Audio chunk starts after video data
+  const aChunkOffset = vChunkOffset + vData.length;
 
   const moovCopy = new Uint8Array(moov);
+  let stcoCount = 0;
   for (let i = 0; i < moovCopy.length - 12; i++) {
-    if (moovCopy[i+4]===0x73 && moovCopy[i+5]===0x74 &&
-        moovCopy[i+6]===0x63 && moovCopy[i+7]===0x6f) {
+    if (moovCopy[i+4]===0x73&&moovCopy[i+5]===0x74&&moovCopy[i+6]===0x63&&moovCopy[i+7]===0x6f) {
       const dv = new DataView(moovCopy.buffer);
-      dv.setUint32(i+16, chunkOffset);
-      break;
+      dv.setUint32(i+16, stcoCount === 0 ? vChunkOffset : aChunkOffset);
+      stcoCount++;
+      i += 16; // skip past this stco box
     }
   }
 
   return concat(ftyp, moovCopy, mdat);
-}
-
-/* ══════════════════════════════════════════════════════════════════════
-   WAV builder — PCM Float32 samples → 16-bit WAV Uint8Array
-   ══════════════════════════════════════════════════════════════════════ */
-function buildWav(pcmSamples, sampleRate) {
-  // pcmSamples: Float32Array of interleaved samples (mono)
-  const numSamples   = pcmSamples.length;
-  const byteRate     = sampleRate * 2;          // 16-bit mono
-  const dataBytes    = numSamples * 2;
-  const buf          = new ArrayBuffer(44 + dataBytes);
-  const view         = new DataView(buf);
-
-  function writeStr(offset, str) {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  }
-  writeStr(0,  'RIFF');
-  view.setUint32(4,  36 + dataBytes,            true);
-  writeStr(8,  'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16,                         true); // chunk size
-  view.setUint16(20, 1,                          true); // PCM
-  view.setUint16(22, 1,                          true); // mono
-  view.setUint32(24, sampleRate,                 true);
-  view.setUint32(28, byteRate,                   true);
-  view.setUint16(32, 2,                          true); // block align
-  view.setUint16(34, 16,                         true); // bits per sample
-  writeStr(36, 'data');
-  view.setUint32(40, dataBytes,                  true);
-
-  // Convert Float32 → Int16
-  let off = 44;
-  for (let i = 0; i < numSamples; i++) {
-    const s = Math.max(-1, Math.min(1, pcmSamples[i]));
-    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-    off += 2;
-  }
-  return new Uint8Array(buf);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -749,14 +655,13 @@ function buildWav(pcmSamples, sampleRate) {
 const FPS        = 10;
 const imgFiles   = [];
 const imgBitmaps = [];
-
-const canvas = document.getElementById('render-canvas');
-const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+const canvas     = document.getElementById('render-canvas');
+const ctx        = canvas.getContext('2d', { willReadFrequently: true });
 
 /* ══════════════════════════════════
    Upload / drag handlers
    ══════════════════════════════════ */
-['img-zone', 'txt-zone'].forEach(id => {
+['img-zone','txt-zone'].forEach(id => {
   const z = document.getElementById(id);
   z.addEventListener('dragover',  e => { e.preventDefault(); z.classList.add('drag-over'); });
   z.addEventListener('dragleave', ()  => z.classList.remove('drag-over'));
@@ -764,42 +669,26 @@ const ctx    = canvas.getContext('2d', { willReadFrequently: true });
 });
 
 document.getElementById('img-input').addEventListener('change', async function () {
-  for (const f of Array.from(this.files)) {
-    imgFiles.push(f);
-    imgBitmaps.push(await createImageBitmap(f));
-  }
-  renderImgList();
-  this.value = '';
+  for (const f of Array.from(this.files)) { imgFiles.push(f); imgBitmaps.push(await createImageBitmap(f)); }
+  renderImgList(); this.value = '';
 });
 
 function renderImgList() {
-  const list = document.getElementById('img-list');
-  list.innerHTML = '';
-  imgFiles.forEach((f, i) => {
-    const chip = document.createElement('div');
-    chip.className = 'file-chip';
-    chip.innerHTML =
-      `<span class="idx-label">#${i + 1}</span>` +
-      `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-         <rect x="3" y="3" width="18" height="18" rx="2"/>
-         <circle cx="8.5" cy="8.5" r="1.5"/>
-         <polyline points="21 15 16 10 5 21"/>
-       </svg>${f.name}<button class="remove" onclick="removeImg(${i})">×</button>`;
+  const list = document.getElementById('img-list'); list.innerHTML = '';
+  imgFiles.forEach((f,i) => {
+    const chip = document.createElement('div'); chip.className = 'file-chip';
+    chip.innerHTML = `<span class="idx-label">#${i+1}</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>${f.name}<button class="remove" onclick="removeImg(${i})">×</button>`;
     list.appendChild(chip);
   });
   updateSegmentPreview();
 }
-function removeImg(i) { imgFiles.splice(i, 1); imgBitmaps.splice(i, 1); renderImgList(); }
+function removeImg(i) { imgFiles.splice(i,1); imgBitmaps.splice(i,1); renderImgList(); }
 
 document.getElementById('txt-input').addEventListener('change', function () {
   if (!this.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('transcript-input').value = e.target.result;
-    onTranscriptChange();
-  };
-  reader.readAsText(this.files[0]);
-  this.value = '';
+  const r = new FileReader();
+  r.onload = e => { document.getElementById('transcript-input').value = e.target.result; onTranscriptChange(); };
+  r.readAsText(this.files[0]); this.value = '';
 });
 
 document.getElementById('transcript-input').addEventListener('input', onTranscriptChange);
@@ -814,265 +703,192 @@ function onTranscriptChange() {
    ══════════════════════════════════ */
 function parseSegments(text) {
   const parts = text.split(/\[screenshot\s*:\s*(\d+)\]/gi);
-  const segs  = [];
-  if (parts.length === 1) {
-    const t = cleanText(parts[0]);
-    if (t) segs.push({ index: 1, text: t });
-    return segs;
-  }
+  const segs = [];
+  if (parts.length === 1) { const t=cleanText(parts[0]); if(t) segs.push({index:1,text:t}); return segs; }
   let leading = cleanText(parts[0]);
-  for (let i = 1; i < parts.length - 1; i += 2) {
-    const idx = parseInt(parts[i]);
-    let   txt = cleanText(parts[i + 1]);
-    if (i === 1 && leading) { txt = leading + ' ' + txt; leading = ''; }
-    if (txt) segs.push({ index: idx, text: txt });
+  for (let i=1;i<parts.length-1;i+=2) {
+    const idx=parseInt(parts[i]); let txt=cleanText(parts[i+1]);
+    if(i===1&&leading){txt=leading+' '+txt;leading='';}
+    if(txt) segs.push({index:idx,text:txt});
   }
   return segs;
 }
-
 function cleanText(s) {
-  return s
-    .replace(/\[screenshot\s*:\s*\d+\]/gi, '')
-    .replace(/#+\s.*\n/g,        '')
-    .replace(/\*\*(.*?)\*\*/g,   '$1')
-    .replace(/\*(.*?)\*/g,       '$1')
-    .replace(/\[[^\]]*\]/g,      '')
-    .replace(/["\u201c\u201d]/g, '"')
-    .replace(/\n{2,}/g,          ' ')
-    .replace(/\s{2,}/g,          ' ')
-    .trim();
+  return s.replace(/\[screenshot\s*:\s*\d+\]/gi,'').replace(/#+\s.*\n/g,'')
+    .replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/\[[^\]]*\]/g,'')
+    .replace(/["\u201c\u201d]/g,'"').replace(/\n{2,}/g,' ').replace(/\s{2,}/g,' ').trim();
 }
-
 function updateSegmentPreview() {
-  const text    = document.getElementById('transcript-input').value;
-  const segs    = parseSegments(text);
-  const preview = document.getElementById('seg-preview');
-  const list    = document.getElementById('seg-list');
-  const countEl = document.getElementById('seg-count');
-  if (segs.length === 0) { preview.classList.remove('visible'); countEl.textContent = ''; return; }
-  countEl.textContent = segs.length + ' segment' + (segs.length > 1 ? 's' : '') + ' detected';
-  list.innerHTML = '';
-  segs.forEach(s => {
-    const missing = s.index > imgFiles.length;
-    const row = document.createElement('div');
-    row.className = 'seg-row';
-    row.innerHTML =
-      `<span class="seg-badge${missing ? ' missing' : ''}">[screenshot:${s.index}]</span>` +
-      `<span class="seg-text">${s.text.substring(0, 90)}${s.text.length > 90 ? '…' : ''}</span>` +
-      (missing
-        ? `<span style="font-size:11px;color:#ef4444;flex-shrink:0;">⚠ image #${s.index} not uploaded</span>`
-        : `<span style="font-size:11px;color:#57606a;flex-shrink:0;">${imgFiles[s.index-1]?.name||''}</span>`);
+  const text=document.getElementById('transcript-input').value, segs=parseSegments(text);
+  const preview=document.getElementById('seg-preview'), list=document.getElementById('seg-list'), countEl=document.getElementById('seg-count');
+  if(!segs.length){preview.classList.remove('visible');countEl.textContent='';return;}
+  countEl.textContent=segs.length+' segment'+(segs.length>1?'s':'')+' detected'; list.innerHTML='';
+  segs.forEach(s=>{
+    const missing=s.index>imgFiles.length, row=document.createElement('div'); row.className='seg-row';
+    row.innerHTML=`<span class="seg-badge${missing?' missing':''}">[screenshot:${s.index}]</span><span class="seg-text">${s.text.substring(0,90)}${s.text.length>90?'…':''}</span>`+(missing?`<span style="font-size:11px;color:#ef4444;flex-shrink:0;">⚠ image #${s.index} not uploaded</span>`:`<span style="font-size:11px;color:#57606a;flex-shrink:0;">${imgFiles[s.index-1]?.name||''}</span>`);
     list.appendChild(row);
   });
   preview.classList.add('visible');
 }
-
 function copyExample() {
-  const text = document.getElementById('example-transcript').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    document.getElementById('transcript-input').value = text;
-    onTranscriptChange();
-  });
+  const text=document.getElementById('example-transcript').textContent;
+  navigator.clipboard.writeText(text).then(()=>{document.getElementById('transcript-input').value=text;onTranscriptChange();});
 }
-
 function resetForm() {
-  imgFiles.length   = 0;
-  imgBitmaps.length = 0;
-  renderImgList();
-  document.getElementById('transcript-input').value = '';
-  document.getElementById('char-count').textContent = '0';
-  document.getElementById('seg-count').textContent  = '';
+  imgFiles.length=0;imgBitmaps.length=0;renderImgList();
+  document.getElementById('transcript-input').value='';
+  document.getElementById('char-count').textContent='0';document.getElementById('seg-count').textContent='';
   document.getElementById('seg-preview').classList.remove('visible');
-  document.getElementById('speech-rate').value = '1';
-  document.getElementById('output-name').value = 'demo_voiceover';
+  document.getElementById('speech-rate').value='1';document.getElementById('output-name').value='demo_voiceover';
   document.getElementById('status-box').classList.remove('visible');
   document.getElementById('result-row').classList.remove('visible');
-  document.getElementById('result-row-audio').classList.remove('visible');
-  document.getElementById('validation-msg').style.display = 'none';
+  document.getElementById('validation-msg').style.display='none';
 }
 
 /* ══════════════════════════════════
    Voice loader
    ══════════════════════════════════ */
 function loadVoices() {
-  const sel    = document.getElementById('voice-select');
-  const voices = speechSynthesis.getVoices();
-  if (!voices.length) return;
-  sel.innerHTML = '';
-  const sorted = [...voices].sort((a, b) => {
-    const aEn = a.lang.startsWith('en') ? 0 : 1;
-    const bEn = b.lang.startsWith('en') ? 0 : 1;
-    return aEn - bEn || a.name.localeCompare(b.name);
-  });
-  sorted.forEach((v, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = `${v.name} (${v.lang})`;
-    if (v.lang.startsWith('en') && v.default) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  if (!sorted.find(v => v.lang.startsWith('en') && v.default)) {
-    const fi = sorted.findIndex(v => v.lang.startsWith('en'));
-    if (fi >= 0) sel.selectedIndex = fi;
-  }
+  const sel=document.getElementById('voice-select'), voices=speechSynthesis.getVoices();
+  if(!voices.length) return;
+  sel.innerHTML='';
+  const sorted=[...voices].sort((a,b)=>{const ae=a.lang.startsWith('en')?0:1,be=b.lang.startsWith('en')?0:1;return ae-be||a.name.localeCompare(b.name);});
+  sorted.forEach((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${v.name} (${v.lang})`;if(v.lang.startsWith('en')&&v.default)o.selected=true;sel.appendChild(o);});
+  if(!sorted.find(v=>v.lang.startsWith('en')&&v.default)){const fi=sorted.findIndex(v=>v.lang.startsWith('en'));if(fi>=0)sel.selectedIndex=fi;}
 }
-speechSynthesis.addEventListener('voiceschanged', loadVoices);
-loadVoices();
+speechSynthesis.addEventListener('voiceschanged',loadVoices); loadVoices();
 
 /* ══════════════════════════════════
    Log / progress
    ══════════════════════════════════ */
-function log(msg, cls) {
-  const el   = document.getElementById('status-log');
-  const line = document.createElement('div');
-  if (cls) line.className = cls;
-  line.textContent = msg;
-  el.appendChild(line);
-  el.scrollTop = el.scrollHeight;
+function log(msg,cls) {
+  const el=document.getElementById('status-log'),line=document.createElement('div');
+  if(cls)line.className=cls; line.textContent=msg; el.appendChild(line); el.scrollTop=el.scrollHeight;
 }
 function setProgress(pct) {
-  document.getElementById('prog-bar').style.width   = pct + '%';
-  document.getElementById('status-pct').textContent = Math.round(pct) + '%';
+  document.getElementById('prog-bar').style.width=pct+'%';
+  document.getElementById('status-pct').textContent=Math.round(pct)+'%';
 }
 
 /* ══════════════════════════════════
    Validation
    ══════════════════════════════════ */
 function validate() {
-  const vm   = document.getElementById('validation-msg');
-  const text = document.getElementById('transcript-input').value.trim();
-  if (imgFiles.length === 0) {
-    vm.textContent = 'Please upload at least one screenshot.'; vm.style.display = 'inline'; return false;
-  }
-  if (!text) {
-    vm.textContent = 'Please paste or upload a transcript.'; vm.style.display = 'inline'; return false;
-  }
-  if (typeof VideoEncoder === 'undefined') {
-    vm.textContent = 'WebCodecs not supported. Please use Chrome 94+ or Edge 94+.';
-    vm.style.display = 'inline'; return false;
-  }
-  const segs    = parseSegments(text);
-  const missing = segs.filter(s => s.index > imgFiles.length);
-  if (missing.length > 0) {
-    const idxs = [...new Set(missing.map(s => s.index))].join(', ');
-    vm.textContent = `Screenshot(s) ${idxs} referenced but not uploaded.`;
-    vm.style.display = 'inline'; return false;
-  }
-  vm.style.display = 'none';
-  return true;
+  const vm=document.getElementById('validation-msg'), text=document.getElementById('transcript-input').value.trim();
+  if(!imgFiles.length){vm.textContent='Please upload at least one screenshot.';vm.style.display='inline';return false;}
+  if(!text){vm.textContent='Please paste or upload a transcript.';vm.style.display='inline';return false;}
+  if(typeof VideoEncoder==='undefined'){vm.textContent='WebCodecs not supported. Use Chrome 94+ or Edge 94+.';vm.style.display='inline';return false;}
+  const segs=parseSegments(text), missing=segs.filter(s=>s.index>imgFiles.length);
+  if(missing.length){vm.textContent=`Screenshot(s) ${[...new Set(missing.map(s=>s.index))].join(', ')} referenced but not uploaded.`;vm.style.display='inline';return false;}
+  vm.style.display='none'; return true;
 }
 
 /* ══════════════════════════════════
    Speak silently — returns duration ms
    ══════════════════════════════════ */
 function speakSilent(text, voice, rate) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve,reject) => {
     speechSynthesis.cancel();
-    const utt  = new SpeechSynthesisUtterance(text);
-    if (voice) utt.voice = voice;
-    utt.rate   = rate;
-    utt.pitch  = 1;
-    utt.volume = 0;
-    const t0 = performance.now();
-    utt.onend   = () => resolve(performance.now() - t0);
-    utt.onerror = e  => reject(new Error('Speech error: ' + (e.error || e)));
+    const utt=new SpeechSynthesisUtterance(text);
+    if(voice)utt.voice=voice; utt.rate=rate; utt.pitch=1; utt.volume=0;
+    const t0=performance.now();
+    utt.onend=()=>resolve(performance.now()-t0);
+    utt.onerror=e=>reject(new Error('Speech error: '+(e.error||e)));
     speechSynthesis.speak(utt);
   });
 }
 
 /* ══════════════════════════════════
-   Capture tab audio stream via getDisplayMedia.
-   Must be called as the very first await in the button-click handler
-   to stay within Chrome's user-gesture window.
-   Returns MediaStream or null.
+   Record all TTS audio segments via getUserMedia + AudioEncoder (AAC)
+   Returns { audioChunks, sampleRate } or null
    ══════════════════════════════════ */
-async function tryStartTabCapture() {
-  if (!navigator.mediaDevices?.getDisplayMedia) return null;
+async function recordAudioAAC(segs, voice, rate) {
+  if (typeof AudioEncoder === 'undefined') return null;
+
+  let micStream;
   try {
-    return await navigator.mediaDevices.getDisplayMedia({
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       video: false,
-      audio: true,
-      preferCurrentTab: true,   // Chrome 109+ — auto-selects this tab, no dialog
-      selfBrowserSurface: 'include',
     });
   } catch (e) {
+    log('  Mic access denied — generating video-only MP4', 'log-warn');
     return null;
   }
-}
 
-/* ══════════════════════════════════
-   Record all TTS segments using a MediaStream capture.
-   captureStream: from tryStartTabCapture() — real tab audio capture
-   Returns: Blob (WebM/Ogg audio) or null
-   ══════════════════════════════════ */
-async function recordAllAudio(segs, voice, rate, captureStream) {
-  if (!captureStream) return null;
+  const audioCtx   = new AudioContext();
+  const sampleRate = audioCtx.sampleRate;
+  const srcNode    = audioCtx.createMediaStreamSource(micStream);
+  const bufSize    = 4096;
+  const processor  = audioCtx.createScriptProcessor(bufSize, 1, 1);
+  const pcmQueue   = []; // Float32Array chunks
 
-  // Pick best supported MIME type
-  const mimeType = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/ogg',
-  ].find(m => MediaRecorder.isTypeSupported(m)) || '';
+  processor.onaudioprocess = e => {
+    pcmQueue.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  };
+  srcNode.connect(processor);
+  processor.connect(audioCtx.destination);
 
-  let mediaRec;
-  try {
-    mediaRec = new MediaRecorder(captureStream, mimeType ? { mimeType } : {});
-  } catch (e) { return null; }
-
-  const chunks = [];
-  mediaRec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-  mediaRec.start(100);
-
+  // Speak all segments aloud (mic records whatever plays through speakers)
   for (let i = 0; i < segs.length; i++) {
-    await speakAudible(segs[i].text, voice, rate);
-    await new Promise(r => setTimeout(r, 150)); // brief gap between segments
+    log(`  Recording segment ${i+1}/${segs.length}…`, 'log-step');
+    await new Promise(resolve => {
+      speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(segs[i].text);
+      if (voice) utt.voice = voice;
+      utt.rate = rate; utt.pitch = 1; utt.volume = 1;
+      utt.onend  = () => setTimeout(resolve, 200); // tail
+      utt.onerror = () => resolve();
+      speechSynthesis.speak(utt);
+    });
+    await new Promise(r => setTimeout(r, 150)); // gap between segments
   }
 
-  mediaRec.stop();
-  await new Promise(r => { mediaRec.onstop = r; });
+  processor.disconnect(); srcNode.disconnect();
+  micStream.getTracks().forEach(t => t.stop());
 
-  captureStream.getTracks().forEach(t => t.stop());
-  return chunks.length > 0 ? new Blob(chunks, { type: mediaRec.mimeType || 'audio/webm' }) : null;
-}
+  // Flatten PCM
+  const total  = pcmQueue.reduce((s,c)=>s+c.length,0);
+  const pcm    = new Float32Array(total);
+  let off = 0;
+  for (const c of pcmQueue) { pcm.set(c,off); off+=c.length; }
 
-/* ══════════════════════════════════
-   Speak one segment aloud (volume=1). Resolves when done.
-   ══════════════════════════════════ */
-function speakAudible(text, voice, rate) {
-  return new Promise((resolve) => {
-    speechSynthesis.cancel();
-    const utt   = new SpeechSynthesisUtterance(text);
-    if (voice) utt.voice = voice;
-    utt.rate    = rate;
-    utt.pitch   = 1;
-    utt.volume  = 1;
-    utt.onend   = () => setTimeout(resolve, 80);
-    utt.onerror = () => resolve();
-    speechSynthesis.speak(utt);
+  // Encode PCM → AAC using AudioEncoder
+  const audioChunks = [];
+  let   aeError     = null;
+  const ae = new AudioEncoder({
+    output: (chunk) => {
+      const data = new Uint8Array(chunk.byteLength);
+      chunk.copyTo(data);
+      audioChunks.push({ data, timestamp: chunk.timestamp, duration: chunk.duration ?? 0 });
+    },
+    error: e => { aeError = e; },
   });
-}
+  ae.configure({ codec: 'mp4a.40.2', sampleRate, numberOfChannels: 1, bitrate: 128000 });
 
-/* ══════════════════════════════════
-   Build an SRT subtitle file from segments + durations.
-   Returns a string.
-   ══════════════════════════════════ */
-function buildSrt(segs, durations) {
-  function fmt(ms) {
-    const h   = Math.floor(ms / 3600000);
-    const m   = Math.floor((ms % 3600000) / 60000);
-    const s   = Math.floor((ms % 60000) / 1000);
-    const ms3 = Math.floor(ms % 1000);
-    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms3).padStart(3,'0')}`;
+  // Feed PCM in 1024-sample frames (AAC frame size)
+  const FRAME = 1024;
+  let   tsUs  = 0;
+  for (let i = 0; i + FRAME <= pcm.length; i += FRAME) {
+    const ab   = new AudioData({
+      format:        'f32',
+      sampleRate,
+      numberOfFrames: FRAME,
+      numberOfChannels: 1,
+      timestamp:     tsUs,
+      data:          pcm.slice(i, i + FRAME),
+    });
+    ae.encode(ab);
+    ab.close();
+    tsUs += Math.round(FRAME / sampleRate * 1e6);
   }
-  let out = '', t = 0;
-  segs.forEach((seg, i) => {
-    const dur = durations[i];
-    out += `${i+1}\n${fmt(t)} --> ${fmt(t + dur)}\n${seg.text}\n\n`;
-    t += dur;
-  });
-  return out;
+  await ae.flush();
+  if (aeError) throw aeError;
+  ae.close();
+  audioCtx.close();
+
+  log(`  Audio: ${audioChunks.length} AAC frames · ${(total/sampleRate).toFixed(1)}s · ${sampleRate}Hz`, 'log-ok');
+  return { audioChunks, sampleRate };
 }
 
 /* ══════════════════════════════════
@@ -1083,10 +899,7 @@ function encodeSegmentSync(bitmap, durationMs, startUs, encoder) {
   const frameCount = Math.max(1, Math.round(durationMs / 1000 * FPS));
   const frameDurUs = Math.round(durationMs * 1000 / frameCount);
   for (let f = 0; f < frameCount; f++) {
-    const frame = new VideoFrame(canvas, {
-      timestamp: startUs + f * frameDurUs,
-      duration:  frameDurUs,
-    });
+    const frame = new VideoFrame(canvas, { timestamp: startUs + f*frameDurUs, duration: frameDurUs });
     encoder.encode(frame, { keyFrame: f === 0 });
     frame.close();
   }
@@ -1103,198 +916,117 @@ async function startGeneration() {
   const statusBox   = document.getElementById('status-box');
   const statusDot   = document.getElementById('status-dot');
   const statusTitle = document.getElementById('status-title');
-  const resultRow      = document.getElementById('result-row');
-  const resultRowAudio = document.getElementById('result-row-audio');
+  const resultRow   = document.getElementById('result-row');
 
   btn.disabled = true;
   resultRow.classList.remove('visible');
-  resultRowAudio.classList.remove('visible');
   document.getElementById('status-log').innerHTML = '';
   statusBox.classList.add('visible');
-  statusDot.className     = 'status-dot running';
+  statusDot.className = 'status-dot running';
   statusTitle.textContent = 'Processing…';
   setProgress(0);
 
   const transcript = document.getElementById('transcript-input').value;
   const segs       = parseSegments(transcript);
-  const baseName   = (document.getElementById('output-name').value.trim() || 'demo_voiceover')
-                       .replace(/\.\w+$/, '');
+  const baseName   = (document.getElementById('output-name').value.trim() || 'demo_voiceover').replace(/\.\w+$/,'');
   const rate       = parseFloat(document.getElementById('speech-rate').value);
 
   const allVoices = speechSynthesis.getVoices();
-  const voiceSel  = document.getElementById('voice-select');
-  const voiceIdx  = parseInt(voiceSel.value);
-  const sorted    = [...allVoices].sort((a, b) => {
-    const aEn = a.lang.startsWith('en') ? 0 : 1;
-    const bEn = b.lang.startsWith('en') ? 0 : 1;
-    return aEn - bEn || a.name.localeCompare(b.name);
-  });
-  const voice = isNaN(voiceIdx) ? null : (sorted[voiceIdx] || null);
+  const voiceIdx  = parseInt(document.getElementById('voice-select').value);
+  const sorted    = [...allVoices].sort((a,b)=>{const ae=a.lang.startsWith('en')?0:1,be=b.lang.startsWith('en')?0:1;return ae-be||a.name.localeCompare(b.name);});
+  const voice     = isNaN(voiceIdx) ? null : (sorted[voiceIdx] || null);
 
   try {
-    // ── FIRST: request tab audio capture while still in the user-gesture window ──
-    // getDisplayMedia must be called before any await to satisfy Chrome's
-    // user-gesture requirement. We'll use the stream later in Step 2.
-    const captureStream = await tryStartTabCapture();
-    if (captureStream) {
-      log('Audio capture ready (tab audio)…', 'log-ok');
-    }
-
-    // ── Canvas size from first screenshot ──────────────────────────────
     const firstBm = imgBitmaps[segs[0].index - 1];
     canvas.width  = firstBm.width  % 2 === 0 ? firstBm.width  : firstBm.width  - 1;
     canvas.height = firstBm.height % 2 === 0 ? firstBm.height : firstBm.height - 1;
     log(`Canvas: ${canvas.width}×${canvas.height}  |  ${FPS} fps  |  ${segs.length} segment(s)`, 'log-step');
 
-    // ── Step 1: Measure all TTS durations silently ─────────────────────
+    // ── Step 1: Measure durations silently ─────────────────────────────
     log('Step 1/4  Measuring speech durations (silent)…', 'log-step');
     setProgress(5);
     const durations = [];
     for (let i = 0; i < segs.length; i++) {
       const ms = await speakSilent(segs[i].text, voice, rate);
       durations.push(ms);
-      log(`  Segment ${i + 1}: ${(ms / 1000).toFixed(2)}s`, 'log-ok');
+      log(`  Segment ${i+1}: ${(ms/1000).toFixed(2)}s`, 'log-ok');
     }
-    const totalMs = durations.reduce((a, b) => a + b, 0);
-    log(`  Total: ${(totalMs / 1000).toFixed(1)}s`, 'log-ok');
+    const totalMs = durations.reduce((a,b)=>a+b,0);
+    log(`  Total: ${(totalMs/1000).toFixed(1)}s`, 'log-ok');
+    setProgress(22);
+
+    // ── Step 2: Record audio (getUserMedia → AAC) ──────────────────────
+    log('Step 2/4  Recording voiceover audio (mic)…', 'log-step');
+    log('  → Browser will ask for microphone permission. Click Allow.', 'log-warn');
     setProgress(25);
-
-    // ── Step 2: Record audio ───────────────────────────────────────────
-    // Speak all segments aloud and capture via getDisplayMedia tab stream.
-    // Falls back to SRT subtitles if tab capture unavailable.
-    log('Step 2/4  Recording voiceover audio…', 'log-step');
-    setProgress(28);
-
-    let audioBlob = null;
-    let srtText   = null;
+    let audioResult = null;
     try {
-      audioBlob = await recordAllAudio(segs, voice, rate, captureStream);
-      if (audioBlob) {
-        log(`  Recorded: ${(audioBlob.size / 1024).toFixed(0)} KB  (${audioBlob.type})`, 'log-ok');
-      } else {
-        log('  Audio capture unavailable — SRT subtitles will be generated instead', 'log-warn');
-        // Still speak aloud so the user hears the narration
-        for (let i = 0; i < segs.length; i++) {
-          log(`  Speaking segment ${i + 1}/${segs.length}…`, 'log-step');
-          await speakAudible(segs[i].text, voice, rate);
-        }
-        srtText = buildSrt(segs, durations);
-      }
-    } catch (audioErr) {
-      log(`  Audio step failed (${audioErr.message})`, 'log-warn');
+      audioResult = await recordAudioAAC(segs, voice, rate);
+    } catch(ae) {
+      log(`  Audio failed: ${ae.message}`, 'log-warn');
     }
-    setProgress(50);
+    setProgress(55);
 
-    // ── Step 3: Create VideoEncoder and encode all frames ──────────────
-    // IMPORTANT: create the encoder HERE — right before encoding.
-    // Chrome closes an idle VideoEncoder after ~1 s — no awaits between
-    // configure() and the first encode() call.
+    // ── Step 3: Encode video frames ────────────────────────────────────
+    // Create VideoEncoder HERE — right before encoding, never before.
     log('Step 3/4  Encoding video frames (H.264)…', 'log-step');
-
     const encodedChunks = [];
-    let encodeError     = null;
-
-    let avcDescription = null;  // AVCDecoderConfigurationRecord from first keyframe
+    let   encodeError   = null;
+    let   avcDescription = null;
 
     const encoder = new VideoEncoder({
       output: (chunk, metadata) => {
-        const data = new Uint8Array(chunk.byteLength);
-        chunk.copyTo(data);
-        // Capture the AVCDecoderConfigurationRecord from the first keyframe.
-        // Chrome Main/High Profile puts SPS/PPS here, not in the bitstream.
-        if (chunk.type === 'key' && !avcDescription && metadata?.decoderConfig?.description) {
+        const data = new Uint8Array(chunk.byteLength); chunk.copyTo(data);
+        if (chunk.type==='key' && !avcDescription && metadata?.decoderConfig?.description)
           avcDescription = new Uint8Array(metadata.decoderConfig.description);
-        }
-        encodedChunks.push({
-          data,
-          timestamp: chunk.timestamp,
-          duration:  chunk.duration ?? 0,
-          type:      chunk.type,
-        });
+        encodedChunks.push({ data, timestamp: chunk.timestamp, duration: chunk.duration??0, type: chunk.type });
       },
-      error: (e) => { encodeError = e; },
+      error: e => { encodeError = e; },
     });
-
     await encoder.configure({
-      // avc1.4d0034 = H.264 Main Profile Level 5.2 — supports up to ~8.9M pixels (4K+)
-      // Previous avc1.42001f (Baseline 3.1) was limited to 921,600 pixels (~1280×720)
-      codec:       'avc1.4d0034',
-      width:       canvas.width,
-      height:      canvas.height,
-      bitrate:     6_000_000,  // bumped for higher-res content
-      framerate:   FPS,
-      latencyMode: 'realtime',
+      codec: 'avc1.4d0034', width: canvas.width, height: canvas.height,
+      bitrate: 6_000_000, framerate: FPS, latencyMode: 'realtime',
     });
 
-    // Submit ALL frames synchronously across all segments — no awaits.
-    // A single flush() at the end drains the encoder queue safely.
-    let timestampUs = 0;
+    let tsUs = 0;
     for (let i = 0; i < segs.length; i++) {
-      const seg    = segs[i];
-      const bitmap = imgBitmaps[seg.index - 1];
-      const nFrames = Math.max(1, Math.round(durations[i] / 1000 * FPS));
-      log(`  [${i + 1}/${segs.length}] [screenshot:${seg.index}] — ${nFrames} frames`, 'log-step');
-      timestampUs = encodeSegmentSync(bitmap, durations[i], timestampUs, encoder);
+      const nFrames = Math.max(1, Math.round(durations[i]/1000*FPS));
+      log(`  [${i+1}/${segs.length}] [screenshot:${segs[i].index}] — ${nFrames} frames`, 'log-step');
+      tsUs = encodeSegmentSync(imgBitmaps[segs[i].index-1], durations[i], tsUs, encoder);
     }
-
-    log('  Flushing encoder…', 'log-step');
-    setProgress(88);
+    log('  Flushing encoder…', 'log-step'); setProgress(88);
     await encoder.flush();
     if (encodeError) throw encodeError;
     encoder.close();
 
-    // ── Step 4: Mux into MP4 ───────────────────────────────────────────
+    // ── Step 4: Mux MP4 ───────────────────────────────────────────────
     log('Step 4/4  Writing MP4…', 'log-step');
-    const mp4Bytes = buildMp4(encodedChunks, canvas.width, canvas.height, FPS, avcDescription);
-    setProgress(98);
+    const mp4Bytes = buildMp4(
+      encodedChunks, canvas.width, canvas.height, FPS, avcDescription,
+      audioResult?.audioChunks, audioResult?.sampleRate
+    );
+    setProgress(99);
 
-    const mp4Blob  = new Blob([mp4Bytes], { type: 'video/mp4' });
-    const mp4Url   = URL.createObjectURL(mp4Blob);
-    const sizeMB   = (mp4Blob.size / 1048576).toFixed(1);
+    const mp4Blob = new Blob([mp4Bytes], { type: 'video/mp4' });
+    const mp4Url  = URL.createObjectURL(mp4Blob);
+    const sizeMB  = (mp4Blob.size / 1048576).toFixed(1);
+    const hasAud  = !!audioResult;
 
     setProgress(100);
-    statusDot.className     = 'status-dot done';
+    statusDot.className = 'status-dot done';
     statusTitle.textContent = 'Complete';
-    log(`Done!  ${baseName}.mp4  (${sizeMB} MB · ${(totalMs/1000).toFixed(1)}s)`, 'log-ok');
+    log(`Done!  ${baseName}.mp4  (${sizeMB} MB · ${(totalMs/1000).toFixed(1)}s · ${hasAud?'video+audio':'video only'})`, 'log-ok');
 
-    // Show MP4 download
     document.getElementById('result-filename').textContent = baseName + '.mp4';
     document.getElementById('result-meta').textContent =
-      `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · ${(totalMs/1000).toFixed(1)}s · ${sizeMB} MB`;
-    const dlLink    = document.getElementById('result-dl');
+      `${segs.length} segment(s) · ${imgFiles.length} screenshot(s) · ${(totalMs/1000).toFixed(1)}s · ${sizeMB} MB · ${hasAud ? 'H.264 + AAC audio' : 'H.264 video only (mic was denied)'}`;
+    const dlLink = document.getElementById('result-dl');
     dlLink.href     = mp4Url;
     dlLink.download = baseName + '.mp4';
     resultRow.classList.add('visible');
 
-    // Show audio/SRT download
-    if (audioBlob) {
-      const ext    = audioBlob.type.includes('ogg') ? 'ogg' : 'webm';
-      const audUrl = URL.createObjectURL(audioBlob);
-      document.getElementById('result-audio-filename').textContent = `${baseName}_audio.${ext}`;
-      document.getElementById('result-audio-meta').textContent =
-        `Voiceover audio · ${(audioBlob.size / 1024).toFixed(0)} KB · ${audioBlob.type} — combine with the MP4 in any video editor`;
-      const dlAudio    = document.getElementById('result-dl-audio');
-      dlAudio.href     = audUrl;
-      dlAudio.download = `${baseName}_audio.${ext}`;
-      document.getElementById('result-dl-audio').textContent = `Download ${ext.toUpperCase()}`;
-      resultRowAudio.classList.add('visible');
-      log(`Audio: ${baseName}_audio.${ext}  (${(audioBlob.size/1024).toFixed(0)} KB)`, 'log-ok');
-    } else if (srtText) {
-      const srtBlob = new Blob([srtText], { type: 'text/plain' });
-      const srtUrl  = URL.createObjectURL(srtBlob);
-      document.getElementById('result-audio-filename').textContent = `${baseName}.srt`;
-      document.getElementById('result-audio-meta').textContent =
-        `SRT subtitles with exact timing — drag onto the MP4 in VLC, Clipchamp, or any video editor`;
-      const dlAudio    = document.getElementById('result-dl-audio');
-      dlAudio.href     = srtUrl;
-      dlAudio.download = `${baseName}.srt`;
-      document.getElementById('result-dl-audio').textContent = 'Download SRT';
-      resultRowAudio.classList.add('visible');
-      log(`Subtitles: ${baseName}.srt`, 'log-ok');
-    }
-
-  } catch (err) {
-    statusDot.className     = 'status-dot error';
+  } catch(err) {
+    statusDot.className = 'status-dot error';
     statusTitle.textContent = 'Error';
     log('ERROR: ' + err.message, 'log-err');
     console.error(err);
